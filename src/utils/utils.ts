@@ -1,17 +1,19 @@
-const IDENTITY_MATRIX = transposeMatrix4x4(new Float32Array([
+import type { Matrix4x4, Matrix3x3, Matrix2x2 } from "../types/matrix"
+
+export const IDENTITY_MATRIX = new Float32Array(transposeMatrix4x4([
     1, 0, 0, 0,
     0, 1, 0, 0,
     0, 0, 1, 0,
     0, 0, 0, 1
 ]))
 
-const AXIS = Object.freeze({
+export const AXIS = Object.freeze({
     Z: "xy",
     X: "yz",
     Y: "xz",
 })
 
-const toDegrees = (rad: number) => {
+export const toDegrees = (rad: number) => {
     return rad * 180 / Math.PI
 }
 
@@ -19,17 +21,19 @@ const toRadians = (deg: number) => {
     return deg * Math.PI / 180
 }
 
+
 //------------------------------------------------------------------
 //
 // Helper function to multiply two 4x4 matrices.
 //
 //------------------------------------------------------------------
-function multiplyMatrix4x4(m1, m2) {
-    let r = [
+export function multiplyMatrix4x4(m1: Matrix4x4, m2: Matrix4x4): Matrix4x4 {
+    let r: Matrix4x4 = [
         0, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
-        0, 0, 0, 0];
+        0, 0, 0, 0
+    ];
 
     // Iterative multiplication
     // for (let i = 0; i < 4; i++) {
@@ -70,8 +74,8 @@ function multiplyMatrix4x4(m1, m2) {
 // Reference: https://jsperf.com/transpose-2d-array
 //
 //------------------------------------------------------------------
-function transposeMatrix4x4(m) {
-    let t = [
+export function transposeMatrix4x4(m: Matrix4x4): Matrix4x4 {
+    let t: Matrix4x4 = [
         m[0], m[4], m[8], m[12],
         m[1], m[5], m[9], m[13],
         m[2], m[6], m[10], m[14],
@@ -86,8 +90,8 @@ function transposeMatrix4x4(m) {
 // Create a scaling matrix ready to be sent to the GPU
 //
 //------------------------------------------------------------------
-function scalingMatrix(sx, sy, sz) {
-    let s = [
+export function scalingMatrix(sx: number, sy: number, sz: number) {
+    let s: Matrix4x4 = [
         sx, 0, 0, 0,
         0, sy, 0, 0,
         0, 0, sz, 0,
@@ -102,8 +106,8 @@ function scalingMatrix(sx, sy, sz) {
 // Create a translation matrix ready to be sent to the GPU
 //
 //------------------------------------------------------------------
-function translationMatrix(dx, dy, dz) {
-    let t = [
+export function translationMatrix(dx: number, dy: number, dz: number) {
+    let t: Matrix4x4 = [
         1, 0, 0, dx,
         0, 1, 0, dy,
         0, 0, 1, dz,
@@ -118,7 +122,7 @@ function translationMatrix(dx, dy, dz) {
 // Create a rotation matrix ready to be sent to the GPU
 //
 //------------------------------------------------------------------
-const rotationMatrix = function() {
+export const rotationMatrix = function() {
     // cache sin and cos
 
     var sin = []
@@ -167,7 +171,7 @@ const rotationMatrix = function() {
 // Create an orthographic projection projection matrix 
 //
 //------------------------------------------------------------------
-function orthographicProjection(width, height, aspect, near, far) {
+export function orthographicProjection(width, height, aspect, near, far) {
     let left = -width * aspect;
     let right = width * aspect;
     let top = height * aspect;
@@ -187,7 +191,7 @@ function orthographicProjection(width, height, aspect, near, far) {
 // Create a perspective projection matrix by using the frustrum
 //
 //------------------------------------------------------------------
-function perspectiveProjection(fov, aspect, near, far) {
+export function perspectiveProjection(fov, aspect, near, far) {
     let top = near * Math.tan(toRadians(fov) / 2)
     let bottom = -top
     let right = top * aspect
@@ -208,19 +212,19 @@ function perspectiveProjection(fov, aspect, near, far) {
 // Helper function to multiple 3 matrices together
 //
 //------------------------------------------------------------------
-function multiply3Matrix4x4(x, y, z) {
+export function multiply3Matrix4x4(x, y, z) {
     return multiplyMatrix4x4(x, multiplyMatrix4x4(y, z))
 }
 
-function magnitudeVec3(vec3) {
+export function magnitudeVec3(vec3) {
     return Math.hypot(vec3[0], vec3[1], vec3[2]);
 }
 
-function subtractVec3(a, b) {
+export function subtractVec3(a, b) {
     return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
 
-function normalizeVec3(vec3) {
+export function normalizeVec3(vec3) {
     if (!vec3 || vec3.length < 3) {
         throw new Error('Vector must have at least 3 components');
     }
@@ -235,7 +239,7 @@ function normalizeVec3(vec3) {
 }
 
 
-function crossProductVec3(a, b) {
+export function crossProductVec3(a, b) {
     if (!a || !b || a.length < 3 || b.length < 3) {
         throw new Error('Both vectors must have at least 3 components');
     }
@@ -246,14 +250,14 @@ function crossProductVec3(a, b) {
     ];
 }
 
-function calculateSurfaceNormal(a, b, c) {
+export function calculateSurfaceNormal(a, b, c) {
     let u = subtractVec3(b, a)
     let v = subtractVec3(c, a)
     let normal = crossProductVec3(u, v)
     return normalizeVec3(normal)
 }
 
-function calculateVertexNormals(vertices, indices) {
+export function calculateVertexNormals(vertices, indices) {
     let surfaceNormals = []
     let vertexNormals = []
     let vertsMap = []
