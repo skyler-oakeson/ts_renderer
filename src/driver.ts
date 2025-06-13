@@ -18,12 +18,13 @@ const TRI_IND = new Uint8Array([
 ]);
 
 
-
 let tridata = glAssociateBuffers(TRI_VERT_COL, TRI_IND, [{ ident: 'a_pos', elem: 3 }, { ident: 'a_color', elem: 4 }])
 let projdata = glAssociateUniform(IDENTITY_MATRIX, 'u_proj')
+let colormask = glAssociateUniform(new Float32Array([1, 0, 0, 1]), 'u_mask')
 
 glBindBuffers(tridata)
 glBindUniform(projdata)
+glBindUniform(colormask)
 
 const render = () => {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);

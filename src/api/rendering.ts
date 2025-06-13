@@ -1,21 +1,34 @@
 import { context } from "../main";
 import {
-    GLType,
     type AttrLoc,
     type FloatArr,
     type UintArr,
-    type UniLoc,
+    type UniBind,
     type AttrObj,
     type AssocAttr,
     type UniObj,
     type AssocUni
 } from "../types/gl";
+import type { Matrix2x2, Matrix3x3, Matrix4x4, Vec2, Vec3, Vec4 } from "../types/matrix";
 
 const gl = context.gl;
 const attrloc: AttrLoc = {}
-const uniloc: UniLoc = {}
+const unibind: UniBind = {}
 const assocbuf: AssocAttr = {}
 const assocuni: AssocUni = {}
+
+const UNIFORM_MATRIX_BINDERS = {
+    mat2: (context: WebGLRenderingContext, loc: WebGLUniformLocation, trans: boolean, val: Matrix2x2) => { context.uniformMatrix2fv(loc, trans, val) },
+    mat3: (context: WebGLRenderingContext, loc: WebGLUniformLocation, trans: boolean, val: Matrix3x3) => { context.uniformMatrix3fv(loc, trans, val) },
+    mat4: (context: WebGLRenderingContext, loc: WebGLUniformLocation, trans: boolean, val: Matrix4x4) => { context.uniformMatrix4fv(loc, trans, val) }
+}
+
+const UNIFORM_VECTOR_BINDERS = {
+    float: (context: WebGLRenderingContext, loc: WebGLUniformLocation, val: GLfloat) => { context.uniform1f(loc, val) },
+    vec2: (context: WebGLRenderingContext, loc: WebGLUniformLocation, val: Vec2) => { context.uniform2fv(loc, val) },
+    vec3: (context: WebGLRenderingContext, loc: WebGLUniformLocation, val: Vec3) => { context.uniform3fv(loc, val) },
+    vec4: (context: WebGLRenderingContext, loc: WebGLUniformLocation, val: Vec4) => { context.uniform4fv(loc, val) },
+}
 
 export function glCreateVertexShader(src: string): WebGLShader {
     const shader = glCreateShader(gl.VERTEX_SHADER, src);
@@ -61,15 +74,17 @@ export function glCreateShaderProgram(vertsrc: string, fragsrc: string): WebGLPr
             const ident = declaration[2].replace(";", "")
             if (qual == 'in') {
                 let loc = gl.getAttribLocation(program, ident)
+                if (loc < 0) {
+                    throw Error(`Could not locate attribute ${ident}`)
+                }
                 attrloc[ident] = loc
-
             }
             if (qual == 'uniform') {
                 let loc = gl.getUniformLocation(program, ident)
                 if (!loc) {
                     throw Error(`Could not locate uniform ${ident}`)
                 }
-                uniloc[ident] = loc
+                unibind[ident] = { loc, type }
             }
         }
     })
@@ -178,10 +193,11 @@ export function glUnbindBuffer(ident: string) {
 //------------------------------------------------------------------
 let uniid = -1
 export function glAssociateUniform(data: any, ident: string) {
-    // TODO make this be able to bind to any uniform
     uniid += 1
+    if (!unibind[ident]) {
+        throw Error(`${ident} is an invalid identifier.`)
+    }
     assocuni[uniid] = { data, ident }
-    console.log(assocuni)
     return uniid
 }
 
@@ -192,8 +208,16 @@ export function glAssociateUniform(data: any, ident: string) {
 //
 //------------------------------------------------------------------
 export function glBindUniform(uniid: number) {
-    let uni = assocuni[uniid]
-    let loc = uniloc[uni.ident]
-    console.log(loc)
-    gl.uniformMatrix4fv(loc, false, uni.data)
+    let { data, ident } = assocuni[uniid]
+    let { loc, type } = unibind[ident]
+
+    if (type.startsWith("mat")) {
+        UNIFORM_MATRIX_BINDERS[type](gl, loc, false, data)
+        return
+    }
+
+    if (type.startsWith("vec")) {
+        UNIFORM_VECTOR_BINDERS[type](gl, loc, data)
+        return
+    }
 }

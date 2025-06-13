@@ -1,4 +1,24 @@
+import { context } from "../main"
 import type { Matrix4x4, Matrix3x3, Matrix2x2 } from "../types/matrix"
+
+const gl = context.gl
+
+
+gl.uniform2f
+
+interface GLContext {
+    callGLFunc: (context: WebGLRenderingContext) => void
+}
+
+export const UNIFORM_BINDERS = {
+    vec2: (context: WebGLRenderingContext) => context.uniform2f,
+    vec3: (context: WebGLRenderingContext) => context.uniform3f,
+    vec4: (context: WebGLRenderingContext) => context.uniform4f,
+    mat2: (context: WebGLRenderingContext) => context.uniformMatrix2fv,
+    mat3: (context: WebGLRenderingContext) => context.uniformMatrix3fv,
+    mat4: (context: WebGLRenderingContext) => context.uniformMatrix4fv
+}
+
 
 export const IDENTITY_MATRIX = new Float32Array(transposeMatrix4x4([
     1, 0, 0, 0,
