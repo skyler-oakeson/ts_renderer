@@ -79,22 +79,47 @@ abstract class Entity {
         }
     }
 
+    public position(x: number, y: number, z: number) {
+        this.updated.trigger();
+        this.pos = [x, y, z]
+    }
 
-    public translate(x: number, y: number, z: number) {
+    public translation(x: number, y: number, z: number) {
         this.updated.trigger();
         this.pos = [this.pos[0] + x, this.pos[1] + y, this.pos[2] + z]
     }
 
-    public rotate(yaw: number, pitch: number, roll: number) {
+    public orient(yaw: number, pitch: number, roll: number) {
         this.updated.trigger();
         this.yaw = yaw;
         this.yaw = pitch;
         this.roll = roll;
     }
 
+    public rotate(yaw: number, pitch: number, roll: number) {
+        this.updated.trigger();
+        this.yaw += yaw;
+        this.yaw += pitch;
+        this.roll += roll;
+    }
+
     public scale(scaler: number) {
         this.updated.trigger();
         this.scaler = scaler;
+    }
+
+    public grow(sum: number) {
+        this.updated.trigger();
+        this.scaler += sum;
+    }
+
+    public shrink(diff: number) {
+        this.updated.trigger();
+        if (this.scaler < diff) {
+            this.scaler = 0;
+        } else {
+            this.scaler -= diff
+        }
     }
 }
 

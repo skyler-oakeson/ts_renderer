@@ -9,19 +9,20 @@ import {
     glAssociateBuffers,
     glAssociateUniform,
 } from "./api/rendering"
-import { perspectiveProjection } from "@utils/matrix";
+import { orthographicProjection, perspectiveProjection } from "@utils/matrix";
 import { parsePly } from "@utils/ply";
 import { Triangle } from "./entities/entity";
 
 const gl = context.gl;
+// stay at top of file or else we have no registered indentifiers
+const program = glCreateShaderProgram(vert, frag)
+gl.useProgram(program)
 const near = .1;
 const far = 1000;
 const viewport = gl.getParameter(gl.VIEWPORT);
 const aspect = viewport[2] / viewport[3]; // width / height
 const fov = 90;
 
-const program = glCreateShaderProgram(vert, frag)
-gl.useProgram(program)
 
 const TRI_VERT_COL = new Float32Array([
     -0.5, 0.5, -1.0, 1.0, 0.0, 0.0, 1.0,
@@ -32,17 +33,19 @@ const TRI_IND = new Uint8Array([
     0, 1, 2
 ]);
 
-let tribufid = glAssociateBuffers(TRI_VERT_COL, TRI_IND, [{ ident: 'a_pos', elem: 3 }, { ident: 'a_color', elem: 4 }])
-let projdata = glAssociateUniform('u_proj', perspectiveProjection(fov, aspect, near, far))
-let colormask = glAssociateUniform('u_mask', new Float32Array([1, 0, 0, 1]))
+const models = {
+    triangle: glAssociateBuffers(TRI_VERT_COL, TRI_IND, [{ ident: 'a_pos', elem: 3 }, { ident: 'a_color', elem: 4 }])
+}
 
-let triangle = new Triangle(tribufid)
-triangle.rotate(0, 45, 90)
-glBindUniform(projdata)
+let proj = glAssociateUniform('u_proj', perspectiveProjection(fov, aspect, near, far))
+glBindUniform(proj)
+
+let colormask = glAssociateUniform('u_mask', new Float32Array([1, 0, 0, 1]))
 glBindUniform(colormask)
 
-const entities = [triangle]
 
+let triangle = new Triangle(models.triangle)
+const entities = [triangle]
 const render = () => {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     entities.forEach((entity) => {
@@ -51,6 +54,7 @@ const render = () => {
 }
 
 const update = (elapsed: DOMHighResTimeStamp) => {
+    triangle.rotate(1, 0, 0)
     entities.forEach((entity) => {
         entity.update(elapsed)
     })
@@ -68,16 +72,14 @@ const animationLoop: FrameRequestCallback = (time: DOMHighResTimeStamp) => {
     requestAnimationFrame(animationLoop)
 }
 
-
-gl.clearColor(0.0, 0.0, 0.0, 1.0)
-gl.enable(gl.DEPTH_TEST)
-
-
 // Kick start the animationloop
 const start = async function() {
     // Initalize or do any await functions here
     requestAnimationFrame(animationLoop)
-    let bunMod = await parsePly('cube.ply')
+
+    // set any gl variables as well
+    gl.clearColor(0.0, 0.0, 0.0, 1.0)
+    gl.enable(gl.DEPTH_TEST)
 }
 
 await start()

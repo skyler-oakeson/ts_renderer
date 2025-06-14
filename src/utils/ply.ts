@@ -10,7 +10,6 @@ const FACE_OFFSET = 3
 //------------------------------------------------------------------
 export async function parsePly(file: string) {
     const ply = await loadModel(file)
-
     const lines = ply.split('\n');
     let expectedFaces = 0;
     let expectedVertices = 0;
