@@ -4,7 +4,7 @@ import {
     type FloatArr,
     type UintArr,
     type UniLocBind,
-    type AssocAttr,
+    type AssocBuf,
     type AssocUni,
     type UniObj,
     type AttrObj
@@ -20,16 +20,16 @@ const assocuni: Array<UniObj> = []
 const UNIFORM_MATRIX_BINDERS = {
     mat2: (context: WebGLRenderingContext,
         loc: WebGLUniformLocation,
-        trans: boolean,
-        val: Matrix2x2) => { context.uniformMatrix2fv(loc, trans, val) },
+        transpose: boolean,
+        val: Matrix2x2) => { context.uniformMatrix2fv(loc, transpose, val) },
     mat3: (context: WebGLRenderingContext,
         loc: WebGLUniformLocation,
-        trans: boolean,
-        val: Matrix3x3) => { context.uniformMatrix3fv(loc, trans, val) },
+        transpose: boolean,
+        val: Matrix3x3) => { context.uniformMatrix3fv(loc, transpose, val) },
     mat4: (context: WebGLRenderingContext,
         loc: WebGLUniformLocation,
-        trans: boolean,
-        val: Matrix4x4) => { context.uniformMatrix4fv(loc, trans, val) }
+        transpose: boolean,
+        val: Matrix4x4) => { context.uniformMatrix4fv(loc, transpose, val) }
 }
 
 const UNIFORM_VECTOR_BINDERS = {
@@ -146,7 +146,7 @@ let bufid = -1;
 export function glAssociateBuffers(
     data: FloatArr,
     ind: UintArr,
-    assoc: Array<{ ident: string, elem: number }>): number {
+    attrs: Array<{ ident: string, elem: number }>): number {
 
     bufid += 1
     // create webGL buffer object
@@ -170,7 +170,7 @@ export function glAssociateBuffers(
 
     // get the amount of elements in each chunk
     let elem = 0;
-    assoc.forEach((attrib) => {
+    attrs.forEach((attrib) => {
         elem += attrib.elem
     })
 
@@ -178,13 +178,13 @@ export function glAssociateBuffers(
     assocbuf.push({
         vertbuf,
         indbuf,
-        vertattr: assoc,
+        attrs: attrs,
         bytes: data.BYTES_PER_ELEMENT,
         stride: data.BYTES_PER_ELEMENT * elem,
         indlen: ind.length
     })
 
-    // return bufid that can identify the BufInfo object when binding
+    // return bufid that can identify the AssocBuf when binding
     return bufid;
 }
 
@@ -199,7 +199,7 @@ export function glBindBuffers(assocbufid: number) {
     gl.bindBuffer(gl.ARRAY_BUFFER, assoc.vertbuf);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, assoc.indbuf)
 
-    const { vertattr, stride, bytes } = assoc;
+    const { attrs: vertattr, stride, bytes } = assoc;
     // bind each associated attribute pointers to the correct position in the buffer
     let offset = 0;
     vertattr.forEach((attrib: { ident: string, elem: number }) => {

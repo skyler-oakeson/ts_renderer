@@ -1,7 +1,4 @@
-import { context } from "@/main"
 import type { Matrix4x4, Matrix3x3, Matrix2x2, Vec3 } from "@/types/matrix"
-
-const { gl } = context
 
 export const IDENTITY_MATRIX = new Float32Array(transposeMatrix4x4([
     1, 0, 0, 0,
@@ -23,7 +20,6 @@ export const toDegrees = (rad: number) => {
 const toRadians = (deg: number) => {
     return deg * Math.PI / 180
 }
-
 
 //------------------------------------------------------------------
 //
