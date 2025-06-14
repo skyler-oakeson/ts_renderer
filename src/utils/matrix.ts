@@ -1,5 +1,5 @@
 import { context } from "@/main"
-import type { Matrix4x4, Matrix3x3, Matrix2x2 } from "@/types/matrix"
+import type { Matrix4x4, Matrix3x3, Matrix2x2, Vec3 } from "@/types/matrix"
 
 const { gl } = context
 
@@ -93,7 +93,7 @@ export function transposeMatrix4x4(m: Matrix4x4): Matrix4x4 {
 // Create a scaling matrix ready to be sent to the GPU
 //
 //------------------------------------------------------------------
-export function scalingMatrix(scaler: number) {
+export function scalingMatrix(scaler: number): Matrix4x4 {
     let s: Matrix4x4 = [
         scaler, 0, 0, 0,
         0, scaler, 0, 0,
@@ -109,7 +109,7 @@ export function scalingMatrix(scaler: number) {
 // Create a translation matrix ready to be sent to the GPU
 //
 //------------------------------------------------------------------
-export function translationMatrix(dx: number, dy: number, dz: number) {
+export function translationMatrix(dx: number, dy: number, dz: number): Matrix4x4 {
     let t: Matrix4x4 = [
         1, 0, 0, dx,
         0, 1, 0, dy,
@@ -128,36 +128,36 @@ export function translationMatrix(dx: number, dy: number, dz: number) {
 export const rotationMatrix = function() {
     // cache sin and cos
 
-    var sin = []
-    var cos = []
+    var sin: Array<number> = []
+    var cos: Array<number> = []
 
     for (let i = 0; i <= 360; i++) {
         sin.push(Math.sin(toRadians(i)))
         cos.push(Math.cos(toRadians(i)))
     }
 
-    return function(yaw, pitch, roll) {
+    return function(yaw: number, pitch: number, roll: number): Matrix4x4 {
 
         // x, y, z = aplha, beta, gamma
         yaw > 0 ? yaw = yaw % 360 : yaw = (yaw % 360) + 360
         pitch > 0 ? pitch = pitch % 360 : pitch = (pitch % 360) + 360
         roll > 0 ? roll = roll % 360 : roll = (roll % 360) + 360
 
-        let gamma = [
+        let gamma: Matrix4x4 = [
             cos[roll], -sin[roll], 0, 0,
             sin[roll], cos[roll], 0, 0,
             0, 0, 1, 0,
             0, 0, 0, 1,
         ];
 
-        let beta = [
+        let beta: Matrix4x4 = [
             1, 0, 0, 0,
             0, cos[pitch], -sin[pitch], 0,
             0, sin[pitch], cos[pitch], 0,
             0, 0, 0, 1,
         ];
 
-        let alpha = [
+        let alpha: Matrix4x4 = [
             cos[yaw], 0, sin[yaw], 0,
             0, 1, 0, 0,
             -sin[yaw], 0, cos[yaw], 0,
@@ -194,13 +194,13 @@ export function orthographicProjection(width, height, aspect, near, far) {
 // Create a perspective projection matrix by using the frustrum
 //
 //------------------------------------------------------------------
-export function perspectiveProjection(fov, aspect, near, far) {
+export function perspectiveProjection(fov: number, aspect: number, near: number, far: number) {
     let top = near * Math.tan(toRadians(fov) / 2)
     let bottom = -top
     let right = top * aspect
     let left = -right
 
-    const pp = [
+    const pp: Matrix4x4 = [
         2 * near / (right - left), 0, 0, -near * (right + left) / (right - left),
         0, (2 * near) / (top - bottom), 0, -near * (top + bottom) / (top - bottom),
         0, 0, -(far + near) / (far - near), (2 * far * near) / (near - far),
@@ -215,47 +215,50 @@ export function perspectiveProjection(fov, aspect, near, far) {
 // Helper function to multiple 3 matrices together
 //
 //------------------------------------------------------------------
-export function multiply3Matrix4x4(x, y, z) {
-    return multiplyMatrix4x4(x, multiplyMatrix4x4(y, z))
+export function multiply3Matrix4x4(mat0: Matrix4x4, mat1: Matrix4x4, mat2: Matrix4x4) {
+    return multiplyMatrix4x4(mat0, multiplyMatrix4x4(mat1, mat2))
 }
 
-export function magnitudeVec3(vec3) {
-    return Math.hypot(vec3[0], vec3[1], vec3[2]);
+export function magnitudeVec3(vec: Vec3): number {
+    return Math.hypot(vec[0], vec[1], vec[2]);
 }
 
-export function subtractVec3(a, b) {
-    return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+export function subtractVec3(vec0: Vec3, vec1: Vec3): Vec3 {
+    const res: Vec3 = [
+        vec0[0] - vec1[0],
+        vec0[1] - vec1[1],
+        vec0[2] - vec1[2]
+    ]
+    return res
 }
 
-export function normalizeVec3(vec3) {
-    if (!vec3 || vec3.length < 3) {
-        throw new Error('Vector must have at least 3 components');
-    }
-    const length = magnitudeVec3(vec3)
+export function normalizeVec3(vec: Vec3): Vec3 {
+    const length = magnitudeVec3(vec)
     if (length > 0) {
-        vec3[0] /= length;
-        vec3[1] /= length;
-        vec3[2] /= length;
-        return vec3
+        vec[0] /= length;
+        vec[1] /= length;
+        vec[2] /= length;
+        return vec
     }
     return [0, 0, 0]
 }
 
 
-export function crossProductVec3(a, b) {
-    if (!a || !b || a.length < 3 || b.length < 3) {
+export function crossProductVec3(vec0: Vec3, vec1: Vec3): Vec3 {
+    if (!vec0 || !vec1 || vec0.length < 3 || vec1.length < 3) {
         throw new Error('Both vectors must have at least 3 components');
     }
-    return [
-        (a[1] * b[2] - a[2] * b[1]),
-        (a[2] * b[0] - a[0] * b[2]),
-        (a[0] * b[1] - a[1] * b[0])
-    ];
+    let res: Vec3 = [
+        (vec0[1] * vec1[2] - vec0[2] * vec1[1]),
+        (vec0[2] * vec1[0] - vec0[0] * vec1[2]),
+        (vec0[0] * vec1[1] - vec0[1] * vec1[0])
+    ]
+    return res;
 }
 
-export function calculateSurfaceNormal(a, b, c) {
-    let u = subtractVec3(b, a)
-    let v = subtractVec3(c, a)
+export function calculateSurfaceNormal(vec0: Vec3, vec1: Vec3, vec2: Vec3): Vec3 {
+    let u = subtractVec3(vec1, vec0)
+    let v = subtractVec3(vec2, vec0)
     let normal = crossProductVec3(u, v)
     return normalizeVec3(normal)
 }
@@ -304,9 +307,6 @@ export function calculateVertexNormals(vertices, indices) {
 
         vertexNormals.push((nx / shared.length), (ny / shared.length), (nz / shared.length))
     }
-
-
-    console.log(vertexNormals)
 
     return new Float32Array(vertexNormals);
 }

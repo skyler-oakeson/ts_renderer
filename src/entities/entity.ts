@@ -12,7 +12,7 @@ import {
 import { rotationMatrix, scalingMatrix, translationMatrix, multiply3Matrix4x4 } from "@/utils/matrix";
 const { gl } = context
 
-abstract class Entity {
+export class Entity {
     private bufid: number;
     private uniid: number
     private pos: Vec3;
@@ -122,17 +122,3 @@ abstract class Entity {
         }
     }
 }
-
-export class Triangle extends Entity {
-    public constructor(
-        bufid: number,
-        pos?: Vec3,
-        yaw?: number,
-        pitch?: number,
-        roll?: number,
-        scaler?: number
-    ) {
-        super(bufid, pos, yaw, pitch, roll, scaler)
-    }
-}
-

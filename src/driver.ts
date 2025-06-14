@@ -11,16 +11,15 @@ import {
 } from "./api/rendering"
 import { orthographicProjection, perspectiveProjection } from "@utils/matrix";
 import { parsePly } from "@utils/ply";
-import { Triangle } from "./entities/entity";
+import { Entity } from "./entities/entity";
 
-const gl = context.gl;
+const { gl, canvas } = context;
 // stay at top of file or else we have no registered indentifiers
 const program = glCreateShaderProgram(vert, frag)
 gl.useProgram(program)
 const near = .1;
 const far = 1000;
-const viewport = gl.getParameter(gl.VIEWPORT);
-const aspect = viewport[2] / viewport[3]; // width / height
+const aspect = canvas.width / canvas.height; // width / height
 const fov = 90;
 
 
@@ -44,7 +43,7 @@ let colormask = glAssociateUniform('u_mask', new Float32Array([1, 0, 0, 1]))
 glBindUniform(colormask)
 
 
-let triangle = new Triangle(models.triangle)
+let triangle = new Entity(models.triangle)
 const entities = [triangle]
 const render = () => {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -59,7 +58,6 @@ const update = (elapsed: DOMHighResTimeStamp) => {
         entity.update(elapsed)
     })
 }
-
 
 let prevTime = performance.now()
 let totalTime = 0;
