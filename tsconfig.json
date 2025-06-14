@@ -21,12 +21,12 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "paths": {
-      // TODO: FIX PATHS AND ALIAS
-      // "@/*": ["src/*"],
-      // "@utils/*": ["src/utils/*"],
-      // "@shaders/*": ["src/shaders/*"],
-      // "@assets/*": ["src/assets/*"],
-      // "@types/*": ["src/types/*"]
+      "@/*": ["./src/*"],
+      "@api/*": ["./src/api*"],
+      "@utils/*": ["./src/utils/*"],
+      "@shaders/*": ["./src/shaders/*"],
+      "@assets/*": ["./src/assets/*"],
+      "@types/*": ["./src/types/*"]
     }
   },
   "include": ["src"]

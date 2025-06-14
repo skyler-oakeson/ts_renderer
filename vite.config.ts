@@ -2,18 +2,17 @@ import { defineConfig, } from 'vite';
 import { resolve } from 'path';
 
 export default defineConfig({
-    assetsInclude: ["**/*.ply", "**/*.vert", "**/*.frag"],
+    assetsInclude: ['**/*.vert', '**/*.frag'],
     resolve: {
-        // TODO THIS IS NOT WORKING
-        // alias: {
-        //     "@": resolve(__dirname, './src'),
-        //     "@utils": resolve(__dirname, './utils'),
-        //     "@shaders": resolve(__dirname, './shaders'),
-        //     "@assets": resolve(__dirname, './assets'),
-        //     "@types": resolve(__dirname, './types'),
-        // }
+        alias: {
+            "@": resolve(__dirname, './src'),
+            "@utils": resolve(__dirname, './src/utils'),
+            "@api": resolve(__dirname, './src/api'),
+            "@shaders": resolve(__dirname, './src/shaders'),
+            "@types": resolve(__dirname, './src/types'),
+        }
     },
     server: {
         port: 3000,
-    }
+    },
 }) 

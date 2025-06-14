@@ -12,12 +12,18 @@ export interface AssocAttr {
 export interface AttrObj {
     vertbuf: WebGLBuffer,
     indbuf: WebGLBuffer,
-    vertattr: Array<{ ident: string, elem: number }>,
+    vertattr: Array<Attr>,
     stride: number,
     bytes: number
+    indlen: number
 }
 
-export interface UniBind {
+export interface Attr {
+    ident: string,
+    elem: number
+}
+
+export interface UniLocBind {
     [key: string]: { loc: WebGLUniformLocation, type: string }
 }
 
@@ -30,4 +36,7 @@ export interface AssocUni {
     [key: number]: UniObj
 }
 
-
+export interface Model {
+    vertar: Array<number>,
+    indarr: Array<number>
+}

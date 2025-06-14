@@ -1,45 +1,77 @@
-import { context } from "../main";
+import { context } from "@/main";
 import {
     type AttrLoc,
     type FloatArr,
     type UintArr,
-    type UniBind,
-    type AttrObj,
+    type UniLocBind,
     type AssocAttr,
+    type AssocUni,
     type UniObj,
-    type AssocUni
-} from "../types/gl";
-import type { Matrix2x2, Matrix3x3, Matrix4x4, Vec2, Vec3, Vec4 } from "../types/matrix";
+    type AttrObj
+} from "@types/gl";
+import type { Matrix2x2, Matrix3x3, Matrix4x4, Vec2, Vec3, Vec4 } from "@types/matrix";
 
 const gl = context.gl;
 const attrloc: AttrLoc = {}
-const unibind: UniBind = {}
-const assocbuf: AssocAttr = {}
-const assocuni: AssocUni = {}
+const unibind: UniLocBind = {}
+const assocbuf: Array<AttrObj> = []
+const assocuni: Array<UniObj> = []
 
 const UNIFORM_MATRIX_BINDERS = {
-    mat2: (context: WebGLRenderingContext, loc: WebGLUniformLocation, trans: boolean, val: Matrix2x2) => { context.uniformMatrix2fv(loc, trans, val) },
-    mat3: (context: WebGLRenderingContext, loc: WebGLUniformLocation, trans: boolean, val: Matrix3x3) => { context.uniformMatrix3fv(loc, trans, val) },
-    mat4: (context: WebGLRenderingContext, loc: WebGLUniformLocation, trans: boolean, val: Matrix4x4) => { context.uniformMatrix4fv(loc, trans, val) }
+    mat2: (context: WebGLRenderingContext,
+        loc: WebGLUniformLocation,
+        trans: boolean,
+        val: Matrix2x2) => { context.uniformMatrix2fv(loc, trans, val) },
+    mat3: (context: WebGLRenderingContext,
+        loc: WebGLUniformLocation,
+        trans: boolean,
+        val: Matrix3x3) => { context.uniformMatrix3fv(loc, trans, val) },
+    mat4: (context: WebGLRenderingContext,
+        loc: WebGLUniformLocation,
+        trans: boolean,
+        val: Matrix4x4) => { context.uniformMatrix4fv(loc, trans, val) }
 }
 
 const UNIFORM_VECTOR_BINDERS = {
-    float: (context: WebGLRenderingContext, loc: WebGLUniformLocation, val: GLfloat) => { context.uniform1f(loc, val) },
-    vec2: (context: WebGLRenderingContext, loc: WebGLUniformLocation, val: Vec2) => { context.uniform2fv(loc, val) },
-    vec3: (context: WebGLRenderingContext, loc: WebGLUniformLocation, val: Vec3) => { context.uniform3fv(loc, val) },
-    vec4: (context: WebGLRenderingContext, loc: WebGLUniformLocation, val: Vec4) => { context.uniform4fv(loc, val) },
+    float: (context: WebGLRenderingContext,
+        loc: WebGLUniformLocation,
+        val: GLfloat) => { context.uniform1f(loc, val) },
+    vec2: (context: WebGLRenderingContext,
+        loc: WebGLUniformLocation,
+        val: Vec2) => { context.uniform2fv(loc, val) },
+    vec3: (context: WebGLRenderingContext,
+        loc: WebGLUniformLocation,
+        val: Vec3) => { context.uniform3fv(loc, val) },
+    vec4: (context: WebGLRenderingContext,
+        loc: WebGLUniformLocation,
+        val: Vec4) => { context.uniform4fv(loc, val) },
 }
 
+//------------------------------------------------------------------
+//
+// Helper function that creates vertex shader from a source string and returns it
+//
+//------------------------------------------------------------------
 export function glCreateVertexShader(src: string): WebGLShader {
     const shader = glCreateShader(gl.VERTEX_SHADER, src);
     return shader;
 }
 
+//------------------------------------------------------------------
+//
+// Helper function that creates a fragment shader from a source string and returns it
+//
+//------------------------------------------------------------------
 export function glCreateFragShader(src: string): WebGLShader {
     const shader = glCreateShader(gl.FRAGMENT_SHADER, src);
     return shader;
 }
 
+//------------------------------------------------------------------
+//
+// Creates a shader program from a fragment or vertex source string and returns it
+// 
+//------------------------------------------------------------------
 function glCreateShader(type: GLenum, src: string): WebGLShader {
     const shader = gl.createShader(type);
     if (!shader) {
@@ -56,6 +88,11 @@ function glCreateShader(type: GLenum, src: string): WebGLShader {
     return shader;
 }
 
+//------------------------------------------------------------------
+//
+// Creates a shader program from a fragment and vertex source string and returns it
+// 
+//------------------------------------------------------------------
 export function glCreateShaderProgram(vertsrc: string, fragsrc: string): WebGLProgram {
     const vert = glCreateVertexShader(vertsrc)
     const frag = glCreateFragShader(fragsrc)
@@ -64,7 +101,17 @@ export function glCreateShaderProgram(vertsrc: string, fragsrc: string): WebGLPr
     gl.attachShader(program, frag);
     gl.linkProgram(program);
 
-    // parse vertex shader to find loactions of attributes and uniforms
+    glRegisterIdentifierLocations(program, vertsrc)
+
+    return program
+}
+
+//------------------------------------------------------------------
+//
+// Register attribute and uniform iden found in the vertex shader
+// 
+//------------------------------------------------------------------
+function glRegisterIdentifierLocations(program: WebGLProgram, vertsrc: string) {
     vertsrc.split('\n').forEach((line) => {
         const strippedLine = line.replace(/layout\s*\([^)]*\)\s*/, '').trim();
         let declaration = strippedLine.split(' ')
@@ -88,11 +135,7 @@ export function glCreateShaderProgram(vertsrc: string, fragsrc: string): WebGLPr
             }
         }
     })
-
-    return program
 }
-
-
 
 //------------------------------------------------------------------
 //
@@ -132,13 +175,14 @@ export function glAssociateBuffers(
     })
 
     // associate the needed values to bind the buffer
-    assocbuf[bufid] = {
+    assocbuf.push({
         vertbuf,
         indbuf,
         vertattr: assoc,
         bytes: data.BYTES_PER_ELEMENT,
-        stride: data.BYTES_PER_ELEMENT * elem
-    }
+        stride: data.BYTES_PER_ELEMENT * elem,
+        indlen: ind.length
+    })
 
     // return bufid that can identify the BufInfo object when binding
     return bufid;
@@ -168,42 +212,6 @@ export function glBindBuffers(assocbufid: number) {
 
 //------------------------------------------------------------------
 //
-// Binds the index buffer to
-//
-//------------------------------------------------------------------
-export function glBindIndexBuffer(indexbuf: WebGLBuffer) {
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexbuf)
-}
-
-
-//------------------------------------------------------------------
-//
-// Unbinds the array passed in as a list
-//
-//------------------------------------------------------------------
-export function glUnbindBuffer(ident: string) {
-}
-
-
-
-//------------------------------------------------------------------
-//
-// Associates the uniform data with its identifier
-//
-//------------------------------------------------------------------
-let uniid = -1
-export function glAssociateUniform(data: any, ident: string) {
-    uniid += 1
-    if (!unibind[ident]) {
-        throw Error(`${ident} is an invalid identifier.`)
-    }
-    assocuni[uniid] = { data, ident }
-    return uniid
-}
-
-
-//------------------------------------------------------------------
-//
 // Binds the associated uniform to the vertex shader 
 //
 //------------------------------------------------------------------
@@ -221,3 +229,63 @@ export function glBindUniform(uniid: number) {
         return
     }
 }
+
+//------------------------------------------------------------------
+//
+// Unbinds the array passed in as a list
+//
+//------------------------------------------------------------------
+export function glUnbindBuffers() {
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
+    gl.bindBuffer(gl.ARRAY_BUFFER, null)
+}
+
+//------------------------------------------------------------------
+//
+// Associates the uniform data with its identifier
+//
+//------------------------------------------------------------------
+let uniid = -1
+export function glAssociateUniform(ident: string, data: any) {
+    uniid += 1
+    if (!unibind[ident]) {
+        throw Error(`${ident} is an invalid identifier.`)
+    }
+    assocuni.push({ data, ident })
+    return uniid
+}
+
+//------------------------------------------------------------------
+//
+// Returns a copy of the data at that associated uniform
+//
+//------------------------------------------------------------------
+export function glGetUniformData(uniid: number) {
+    return assocuni[uniid].data
+}
+
+//------------------------------------------------------------------
+//
+// Updates the data of the associated uniform with that id
+//
+//------------------------------------------------------------------
+export function glUpdateUniformData(uniid: number, data: any): boolean {
+    if (typeof assocuni[uniid] != typeof data) {
+        console.error("Updating uniform with incorrect data type.")
+        return false
+    }
+
+    assocuni[uniid].data = data
+    return true
+}
+
+//------------------------------------------------------------------
+//
+// Returns the associated buffers index length
+//
+//------------------------------------------------------------------
+export function glGetIndiceLength(assocbufid: number) {
+    let assoc = assocbuf[assocbufid]
+    return assoc.indlen
+}
+
