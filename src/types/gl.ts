@@ -12,7 +12,7 @@ export interface AssocAttr {
 export interface AttrObj {
     vertbuf: WebGLBuffer,
     indbuf: WebGLBuffer,
-    attr: Array<Attr>,
+    attrs: Array<Attr>,
     stride: number,
     bytes: number
     indlen: number

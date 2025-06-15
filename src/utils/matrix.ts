@@ -105,11 +105,11 @@ export function scalingMatrix(scaler: number): Matrix4x4 {
 // Create a translation matrix ready to be sent to the GPU
 //
 //------------------------------------------------------------------
-export function translationMatrix(x: number, y: number, z: number): Matrix4x4 {
+export function translationMatrix(pos: Vec3): Matrix4x4 {
     let t: Matrix4x4 = [
-        1, 0, 0, x,
-        0, 1, 0, y,
-        0, 0, 1, z,
+        1, 0, 0, pos[0],
+        0, 1, 0, pos[1],
+        0, 0, 1, pos[2],
         0, 0, 0, 1,
     ]
 

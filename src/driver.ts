@@ -10,7 +10,7 @@ import {
 } from "./api/rendering"
 import { orthographicProjection, perspectiveProjection } from "@utils/matrix";
 import { parsePly } from "@utils/ply";
-import { Triangle } from "./entities/entity";
+import { Triangle, Light } from "./entities/entity";
 
 const { gl, canvas } = context;
 // stay at top of file or else we have no registered indentifiers
@@ -42,6 +42,9 @@ let proj = glBindUniform('u_proj', perspectiveProjection(fov, aspect, near, far)
 let colormask = glBindUniform('u_mask', new Float32Array([1, 0, 0, 1]))
 
 let triangle = new Triangle(models.triangle)
+let light = new Light([1, 1, 1, 0])
+
+
 const entities = [triangle]
 const render = () => {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
