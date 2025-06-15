@@ -7,16 +7,16 @@ import {
     glBindBuffers,
     glBindUniform,
     glAssociateBuffers,
-    glAssociateUniform,
 } from "./api/rendering"
 import { orthographicProjection, perspectiveProjection } from "@utils/matrix";
 import { parsePly } from "@utils/ply";
-import { Entity } from "./entities/entity";
+import { Triangle } from "./entities/entity";
 
 const { gl, canvas } = context;
 // stay at top of file or else we have no registered indentifiers
 const program = glCreateShaderProgram(vert, frag)
 gl.useProgram(program)
+
 const near = .1;
 const far = 1000;
 const aspect = canvas.width / canvas.height; // width / height
@@ -36,27 +36,23 @@ const models = {
     triangle: glAssociateBuffers(TRI_VERT_COL, TRI_IND, [{ ident: 'a_pos', elem: 3 }, { ident: 'a_color', elem: 4 }])
 }
 
-let proj = glAssociateUniform('u_proj', perspectiveProjection(fov, aspect, near, far))
-glBindUniform(proj)
 
-let colormask = glAssociateUniform('u_mask', new Float32Array([1, 0, 0, 1]))
-glBindUniform(colormask)
+let proj = glBindUniform('u_proj', perspectiveProjection(fov, aspect, near, far))
 
+let colormask = glBindUniform('u_mask', new Float32Array([1, 0, 0, 1]))
 
-let triangle = new Entity(models.triangle)
+let triangle = new Triangle(models.triangle)
 const entities = [triangle]
 const render = () => {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    entities.forEach((entity) => {
-        entity.render()
-    })
+    triangle.render()
+    // entities.forEach((entity) => {
+    //     entity.render()
+    // })
 }
 
 const update = (elapsed: DOMHighResTimeStamp) => {
     triangle.rotate(1, 0, 0)
-    entities.forEach((entity) => {
-        entity.update(elapsed)
-    })
 }
 
 let prevTime = performance.now()

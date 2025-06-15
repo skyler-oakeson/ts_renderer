@@ -1,124 +1,195 @@
-import type { Vec3 } from "@types/matrix"
+import type { Matrix4x4, Vec3, Vec4 } from "@types/matrix"
 import { context } from "@/main";
 import {
-    glAssociateUniform,
     glBindBuffers,
     glBindUniform,
     glGetIndiceLength,
     glUnbindBuffers,
-    glUpdateUniformData
 } from "@/api/rendering";
-
 import { rotationMatrix, scalingMatrix, translationMatrix, multiply3Matrix4x4 } from "@/utils/matrix";
+import { loadModel } from "@/utils/load";
 const { gl } = context
 
-export class Entity {
-    private bufid: number;
-    private uniid: number
-    private pos: Vec3;
-    private yaw: number;
-    private pitch: number;
-    private roll: number;
-    private scaler: number;
-    private updated: {
-        status: boolean,
-        trigger: () => void,
-        reset: () => void
-    }
+class Entity { }
+type Constructor = new (...args: any[]) => {}
+type GConstructor<T = {}> = new (...args: any[]) => T;
 
-    public constructor(
-        bufid: number,
-        pos?: Vec3,
-        yaw?: number,
-        pitch?: number,
-        roll?: number,
-        scaler?: number
-    ) {
-        this.pos = pos ? pos : [0, 0, 0];
-        this.yaw = yaw ? yaw : 0;
-        this.pitch = pitch ? pitch : 0;
-        this.roll = roll ? roll : 0;
-        this.scaler = scaler ? scaler : 1;
+type Watchable = GConstructor<{
+    changed: boolean
+    notify(): void
+    acknowledge(): boolean
+}>
 
-        // set updated to true to trigger initial update
-        this.updated = {
-            status: true,
-            trigger: function() { this.status = true },
-            reset: function() { this.status = false }
+function Watch<TBase extends Constructor>(Base: TBase) {
+    return class Watching extends Base {
+        private _changed = false
+
+        notify(): void {
+            this._changed = true;
         }
 
-        this.bufid = bufid
-
-        // setup initial conditions
-        const mm = multiply3Matrix4x4(
-            rotationMatrix(this.yaw, this.pitch, this.roll),
-            translationMatrix(this.pos[0], this.pos[1], this.pos[2]),
-            scalingMatrix(this.scaler)
-        )
-
-        this.uniid = glAssociateUniform('u_model', mm)
-    }
-
-    public render() {
-        glBindBuffers(this.bufid)
-        glBindUniform(this.uniid)
-        let indlen = glGetIndiceLength(this.bufid)
-        gl.drawElements(gl.TRIANGLES, indlen, gl.UNSIGNED_BYTE, 0);
-        glUnbindBuffers()
-    }
-
-    public update(elapsed: DOMHighResTimeStamp): void {
-        if (this.updated.status) {
-            this.updated.reset()
-            const mm = multiply3Matrix4x4(
-                rotationMatrix(this.yaw, this.pitch, this.roll),
-                translationMatrix(this.pos[0], this.pos[1], this.pos[2]),
-                scalingMatrix(this.scaler)
-            )
-            glUpdateUniformData(this.uniid, mm)
-        }
-    }
-
-    public position(x: number, y: number, z: number) {
-        this.updated.trigger();
-        this.pos = [x, y, z]
-    }
-
-    public translation(x: number, y: number, z: number) {
-        this.updated.trigger();
-        this.pos = [this.pos[0] + x, this.pos[1] + y, this.pos[2] + z]
-    }
-
-    public orient(yaw: number, pitch: number, roll: number) {
-        this.updated.trigger();
-        this.yaw = yaw;
-        this.yaw = pitch;
-        this.roll = roll;
-    }
-
-    public rotate(yaw: number, pitch: number, roll: number) {
-        this.updated.trigger();
-        this.yaw += yaw;
-        this.yaw += pitch;
-        this.roll += roll;
-    }
-
-    public scale(scaler: number) {
-        this.updated.trigger();
-        this.scaler = scaler;
-    }
-
-    public grow(sum: number) {
-        this.updated.trigger();
-        this.scaler += sum;
-    }
-
-    public shrink(diff: number) {
-        this.updated.trigger();
-        if (this.scaler < diff) {
-            this.scaler = 0;
-        } else {
-            this.scaler -= diff
+        acknowledge(): boolean {
+            if (this._changed) {
+                this._changed = false
+                return true
+            }
+            return false
         }
     }
 }
+
+function Rotate<TBase extends Watchable>(Base: TBase) {
+    return class Rotating extends Base {
+        private _yaw = 0;
+        private _pitch = 0;
+        private _roll = 0;
+
+        orient(yaw: number, pitch: number, roll: number) {
+            this.notify()
+            this._yaw = yaw;
+            this._pitch = pitch;
+            this._roll = roll;
+        }
+
+        rotate(yaw: number, pitch: number, roll: number) {
+            this.notify()
+            this._yaw += yaw;
+            this._pitch += pitch;
+            this._roll += roll;
+        }
+
+        get yaw(): number {
+            return this._yaw;
+        }
+
+        get pitch(): number {
+            return this._pitch;
+        }
+
+        get roll(): number {
+            return this._roll;
+        }
+    }
+}
+
+function Position<TBase extends Watchable>(Base: TBase) {
+    return class Positioning extends Base {
+        private _pos: Vec3 = [0, 0, 0]
+
+        position(x: number, y: number, z: number) {
+            this.notify()
+            this._pos = [x, y, z]
+        }
+
+        translate(x: number, y: number, z: number) {
+            this.notify()
+            this._pos = [this._pos[0] + x, this._pos[1] + y, this._pos[2] + z]
+        }
+
+
+        get pos(): Vec3 {
+            return this._pos;
+        }
+    }
+}
+
+function Scale<TBase extends Watchable>(Base: TBase) {
+    return class Scaling extends Base {
+        private _scaler = 1;
+
+        scale(scale: number) {
+            this.notify()
+            this._scaler = scale;
+        }
+
+        public grow(sum: number) {
+            this.notify()
+            this._scaler += sum;
+        }
+
+        public shrink(diff: number) {
+            this.notify()
+            if (this._scaler < diff) {
+                this._scaler = 0;
+            } else {
+                this._scaler -= diff
+            }
+        }
+
+        get scaler(): number {
+            return this._scaler
+        }
+    }
+}
+
+type Renderable = GConstructor<{
+    pos: Vec3
+    scaler: number
+    yaw: number
+    pitch: number
+    roll: number
+    changed: boolean
+    acknowledge(): boolean
+}>
+
+function Render<TBase extends Renderable>(Base: TBase) {
+    return class Rendering extends Base {
+        private _bufid: number;
+        private _rotation = rotationMatrix(this.yaw, this.pitch, this.roll)
+        private _translation = translationMatrix(...this.pos)
+        private _scaling = scalingMatrix(this.scaler)
+        private _model = multiply3Matrix4x4(this._rotation, this._translation, this._scaling)
+
+        public constructor(modelid: number) {
+            super()
+            this._bufid = modelid
+        }
+
+        render() {
+            glBindBuffers(this._bufid)
+            glBindUniform("u_model", this.model)
+            let indlen = glGetIndiceLength(this.bufid)
+            gl.drawElements(gl.TRIANGLES, indlen, gl.UNSIGNED_BYTE, 0);
+            glUnbindBuffers()
+        }
+
+        get model(): Matrix4x4 {
+            if (this.acknowledge()) {
+                this._rotation = rotationMatrix(this.yaw, this.pitch, this.roll)
+                this._translation = translationMatrix(...this.pos)
+                this._scaling = scalingMatrix(this.scaler)
+                this._model = multiply3Matrix4x4(this._rotation, this._translation, this._scaling);
+            }
+            return this._model
+        }
+
+        get bufid() {
+            return this._bufid
+        }
+    }
+}
+
+
+type Emitable = GConstructor<{
+    pos: Vec3
+    changed: boolean
+    acknowledge(): boolean
+}>
+
+function Emit<TBase extends Emitable>(Base: TBase) {
+    return class Emitting extends Base {
+        private _color: Vec4;
+        private _uniid: number;
+
+        public constructor() {
+        }
+    }
+}
+
+const Movable = (input: any) => (Rotate(Position(Scale(Watch(input)))))
+
+export const Triangle = Render(Movable(Entity))
+export const Light = Emit(Position(Watch(Entity)))
+
+
+

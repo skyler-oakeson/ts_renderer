@@ -6,14 +6,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 const canvas = document.querySelector<HTMLCanvasElement>('#canvas-main')!
 const gl = canvas.getContext('webgl2')!
 
-function resizeCanvas() {
-    canvas.width = window.innerWidth
-    canvas.height = window.innerHeight
-}
-
-resizeCanvas()
-window.addEventListener('resize', resizeCanvas)
-
 if (!gl) {
     console.error("webgl2 is not supported.")
 }

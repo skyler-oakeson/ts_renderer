@@ -11,11 +11,11 @@ import {
 } from "@types/gl";
 import type { Matrix2x2, Matrix3x3, Matrix4x4, Vec2, Vec3, Vec4 } from "@types/matrix";
 
-const gl = context.gl;
+const { gl } = context;
+
 const attrloc: AttrLoc = {}
-const unibind: UniLocBind = {}
+const uniloc: UniLocBind = {}
 const assocbuf: Array<AttrObj> = []
-const assocuni: Array<UniObj> = []
 
 const UNIFORM_MATRIX_BINDERS = {
     mat2: (context: WebGLRenderingContext,
@@ -46,6 +46,16 @@ const UNIFORM_VECTOR_BINDERS = {
         loc: WebGLUniformLocation,
         val: Vec4) => { context.uniform4fv(loc, val) },
 }
+
+function resizeCanvas() {
+    gl.canvas.width = window.innerWidth
+    gl.canvas.height = window.innerHeight
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
+}
+
+resizeCanvas()
+window.addEventListener('resize', resizeCanvas)
+
 
 //------------------------------------------------------------------
 //
@@ -108,7 +118,7 @@ export function glCreateShaderProgram(vertsrc: string, fragsrc: string): WebGLPr
 
 //------------------------------------------------------------------
 //
-// Register attribute and uniform iden found in the vertex shader
+// Register attribute and uniform identifiers found in the vertex shader
 // 
 //------------------------------------------------------------------
 function glRegisterIdentifierLocations(program: WebGLProgram, vertsrc: string) {
@@ -131,7 +141,7 @@ function glRegisterIdentifierLocations(program: WebGLProgram, vertsrc: string) {
                 if (!loc) {
                     throw Error(`Could not locate uniform ${ident}`)
                 }
-                unibind[ident] = { loc, type }
+                uniloc[ident] = { loc, type }
             }
         }
     })
@@ -146,8 +156,8 @@ let bufid = -1;
 export function glAssociateBuffers(
     data: FloatArr,
     ind: UintArr,
-    attrs: Array<{ ident: string, elem: number }>): number {
-
+    attrs: Array<{ ident: string, elem: number }>
+): number {
     bufid += 1
     // create webGL buffer object
     const vertbuf = gl.createBuffer();
@@ -178,7 +188,7 @@ export function glAssociateBuffers(
     assocbuf.push({
         vertbuf,
         indbuf,
-        attrs: attrs,
+        attrs,
         bytes: data.BYTES_PER_ELEMENT,
         stride: data.BYTES_PER_ELEMENT * elem,
         indlen: ind.length
@@ -199,10 +209,10 @@ export function glBindBuffers(assocbufid: number) {
     gl.bindBuffer(gl.ARRAY_BUFFER, assoc.vertbuf);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, assoc.indbuf)
 
-    const { attrs: vertattr, stride, bytes } = assoc;
+    const { attrs, stride, bytes } = assoc;
     // bind each associated attribute pointers to the correct position in the buffer
     let offset = 0;
-    vertattr.forEach((attrib: { ident: string, elem: number }) => {
+    attrs.forEach((attrib: { ident: string, elem: number }) => {
         const loc = attrloc[attrib.ident]
         gl.enableVertexAttribArray(loc);
         gl.vertexAttribPointer(loc, attrib.elem, gl.FLOAT, false, stride, offset * bytes)
@@ -215,9 +225,8 @@ export function glBindBuffers(assocbufid: number) {
 // Binds the associated uniform to the vertex shader 
 //
 //------------------------------------------------------------------
-export function glBindUniform(uniid: number) {
-    let { data, ident } = assocuni[uniid]
-    let { loc, type } = unibind[ident]
+export function glBindUniform(ident: string, data: any) {
+    let { loc, type } = uniloc[ident]
 
     if (type.startsWith("mat")) {
         UNIFORM_MATRIX_BINDERS[type](gl, loc, false, data)
@@ -240,44 +249,6 @@ export function glUnbindBuffers() {
     gl.bindBuffer(gl.ARRAY_BUFFER, null)
 }
 
-//------------------------------------------------------------------
-//
-// Associates the uniform data with its identifier
-//
-//------------------------------------------------------------------
-let uniid = -1
-export function glAssociateUniform(ident: string, data: any) {
-    uniid += 1
-    if (!unibind[ident]) {
-        throw Error(`${ident} is an invalid identifier.`)
-    }
-    assocuni.push({ data, ident })
-    return uniid
-}
-
-//------------------------------------------------------------------
-//
-// Returns a copy of the data at that associated uniform
-//
-//------------------------------------------------------------------
-export function glGetUniformData(uniid: number) {
-    return assocuni[uniid].data
-}
-
-//------------------------------------------------------------------
-//
-// Updates the data of the associated uniform with that id
-//
-//------------------------------------------------------------------
-export function glUpdateUniformData(uniid: number, data: any): boolean {
-    if (typeof assocuni[uniid] != typeof data) {
-        console.error("Updating uniform with incorrect data type.")
-        return false
-    }
-
-    assocuni[uniid].data = data
-    return true
-}
 
 //------------------------------------------------------------------
 //

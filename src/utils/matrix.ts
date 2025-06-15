@@ -1,11 +1,11 @@
 import type { Matrix4x4, Matrix3x3, Matrix2x2, Vec3 } from "@/types/matrix"
 
-export const IDENTITY_MATRIX = new Float32Array(transposeMatrix4x4([
+export const IDENTITY_MATRIX = [
     1, 0, 0, 0,
     0, 1, 0, 0,
     0, 0, 1, 0,
     0, 0, 0, 1
-]))
+]
 
 export const AXIS = Object.freeze({
     Z: "xy",
@@ -105,11 +105,11 @@ export function scalingMatrix(scaler: number): Matrix4x4 {
 // Create a translation matrix ready to be sent to the GPU
 //
 //------------------------------------------------------------------
-export function translationMatrix(dx: number, dy: number, dz: number): Matrix4x4 {
+export function translationMatrix(x: number, y: number, z: number): Matrix4x4 {
     let t: Matrix4x4 = [
-        1, 0, 0, dx,
-        0, 1, 0, dy,
-        0, 0, 1, dz,
+        1, 0, 0, x,
+        0, 1, 0, y,
+        0, 0, 1, z,
         0, 0, 0, 1,
     ]
 
