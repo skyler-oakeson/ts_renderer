@@ -132,20 +132,21 @@ function glRegisterIdentifierLocations(program: WebGLProgram, vertsrc: string) {
             if (qual == 'in') {
                 let loc = gl.getAttribLocation(program, ident)
                 if (loc < 0) {
-                    throw Error(`Could not locate attribute ${ident}`)
+                    console.error(`Could not locate attribute ${ident}`)
                 }
                 attrloc[ident] = loc
             }
             if (qual == 'uniform') {
                 let loc = gl.getUniformLocation(program, ident)
                 if (!loc) {
-                    throw Error(`Could not locate uniform ${ident}`)
+                    console.error(`Could not locate uniform ${ident}`)
                 }
                 uniloc[ident] = { loc, type }
             }
         }
     })
 }
+
 
 //------------------------------------------------------------------
 //
@@ -156,7 +157,7 @@ let bufid = -1;
 export function glAssociateBuffers(
     data: FloatArr,
     ind: UintArr,
-    attrs: Array<{ ident: string, elem: number }>
+    ...attrs: Array<{ ident: string, elem: number }>
 ): number {
     bufid += 1
     // create webGL buffer object
@@ -164,11 +165,11 @@ export function glAssociateBuffers(
     if (!vertbuf) {
         console.error("Failed to allocate vertex buffer.")
     }
+
     // bind vertex buffer
     gl.bindBuffer(gl.ARRAY_BUFFER, vertbuf)
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, null)
-
 
     const indbuf = gl.createBuffer();
     if (!indbuf) {
@@ -179,9 +180,9 @@ export function glAssociateBuffers(
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
 
     // get the amount of elements in each chunk
-    let elem = 0;
+    let elems = 0;
     attrs.forEach((attrib) => {
-        elem += attrib.elem
+        elems += attrib.elem
     })
 
     // associate the needed values to bind the buffer
@@ -190,8 +191,8 @@ export function glAssociateBuffers(
         indbuf,
         attrs,
         bytes: data.BYTES_PER_ELEMENT,
-        stride: data.BYTES_PER_ELEMENT * elem,
-        indlen: ind.length
+        stride: data.BYTES_PER_ELEMENT * elems,
+        indlen: ind.length,
     })
 
     // return bufid that can identify the AssocBuf when binding
@@ -259,4 +260,30 @@ export function glGetIndiceLength(assocbufid: number) {
     let assoc = assocbuf[assocbufid]
     return assoc.indlen
 }
+
+
+//------------------------------------------------------------------
+//
+// Interleaves data from multiple arrays into one vertex array
+//
+//------------------------------------------------------------------
+export function interleave(...args: Array<{ arr: Array<number>, elem: number }>): Array<number> {
+    let cycles: number = -1;
+    args.forEach(({ arr, elem }, index) => {
+        cycles = -1 ? arr.length / elem : cycles
+        if (cycles != arr.length / elem) {
+            throw Error(`${elem} is a misaligned element of array at index ${index}.`)
+        }
+    })
+
+    let interleaved = new Array<number>()
+    for (let c = 0; c < cycles; c++) {
+        args.forEach(({ arr, elem }, index) => {
+            interleaved.push(...arr.splice(0, elem))
+        })
+    }
+
+    return interleaved
+}
+
 

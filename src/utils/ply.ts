@@ -1,14 +1,23 @@
 import { loadModel } from "@utils/load";
+import { calculateVertexNormals } from "./matrix";
 
 const VERTEX_OFFSET = 3
 const FACE_OFFSET = 3
+
+interface Ply {
+    vertices: Array<number>
+    indices: Array<number>
+    colors: Array<number>
+    normals: Array<number>
+}
+
 
 //------------------------------------------------------------------
 //
 // Parses a ply file
 //
 //------------------------------------------------------------------
-export async function parsePly(file: string) {
+export async function parsePly(file: string): Promise<Ply> {
     const ply = await loadModel(file)
     const lines = ply.split('\n');
     let expectedFaces = 0;
@@ -17,6 +26,7 @@ export async function parsePly(file: string) {
     let vertices = [];
     const indices = [];
     const colors = [];
+
 
     let endHeader = 0;
 
@@ -45,15 +55,19 @@ export async function parsePly(file: string) {
         }
 
         if (line.includes("element vertex")) {
-            expectedVertices = parseInt(line.match(/^element\s+vertex\s+(\d+)/)[1]);
+            let vertices = line.split(" ")[2]
+            if (vertices != null) {
+                expectedVertices = parseInt(vertices)
+            }
             continue
         }
 
         if (line.includes("element face")) {
-            let faces = line.match(/^element\s+face\s+(\d+)/)[1]
+            let faces = line.split(" ")[2]
             if (faces != null) {
                 expectedFaces = parseInt(faces);
             }
+            continue
         }
     }
 
@@ -75,7 +89,10 @@ export async function parsePly(file: string) {
         const line = lines[i].trim();
         if (line.startsWith('3')) {
             const face = line.trim().split(/\s+/).slice(1, 4)
-            indices.push(parseInt(face[0]), parseInt(face[1]), parseInt(face[2]));
+            const v0 = parseInt(face[0]);
+            const v1 = parseInt(face[1]);
+            const v2 = parseInt(face[2]);
+            indices.push(v0, v1, v2);
         } else if (line.startsWith('4')) {
             const face = line.trim().split(/\s+/).slice(1, 5);
             const v0 = parseInt(face[0]);
@@ -86,16 +103,17 @@ export async function parsePly(file: string) {
             indices.push(v0, v2, v3);
         }
     }
+    vertices = convertToUnitSpace(vertices)
 
-    let data = {}
-    data.vertices = new Float32Array(convertToUnitSpace(vertices))
-    data.indices = new Uint32Array(indices)
-    data.colors = new Float32Array(colors)
-
-    return data;
+    return {
+        vertices,
+        indices,
+        colors,
+        normals: calculateVertexNormals(vertices, indices)
+    }
 }
 
-function convertToUnitSpace(vertices) {
+function convertToUnitSpace(vertices: Array<number>) {
     let max = 0;
     for (let i = 0; i < vertices.length; i++) {
         let cord = Math.abs(vertices[i])

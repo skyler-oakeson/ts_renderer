@@ -67,6 +67,9 @@ export function multiplyMatrix4x4(m1: Matrix4x4, m2: Matrix4x4): Matrix4x4 {
     return r;
 }
 
+
+
+
 //------------------------------------------------------------------
 //
 // Transpose a matrix.
@@ -114,6 +117,18 @@ export function translationMatrix(pos: Vec3): Matrix4x4 {
     ]
 
     return transposeMatrix4x4(t)
+}
+
+
+export function viewMatrix(right: Vec3, up: Vec3, forward: Vec3, pos: Vec3): Matrix4x4 {
+    let v: Matrix4x4 = [
+        right[0], up[0], forward[0], pos[0],
+        right[1], up[1], forward[1], pos[1],
+        right[2], up[2], forward[2], pos[2],
+        0, 0, 0, 1
+    ]
+
+    return transposeMatrix4x4(v)
 }
 
 //------------------------------------------------------------------
@@ -304,6 +319,6 @@ export function calculateVertexNormals(vertices, indices) {
         vertexNormals.push((nx / shared.length), (ny / shared.length), (nz / shared.length))
     }
 
-    return new Float32Array(vertexNormals);
+    return vertexNormals;
 }
 

@@ -1,124 +1,109 @@
-import type { Vec3 } from "@types/matrix"
-import { context } from "@/main";
-import {
-    glAssociateUniform,
-    glBindBuffers,
-    glBindUniform,
-    glGetIndiceLength,
-    glUnbindBuffers,
-    glUpdateUniformData
-} from "@/api/rendering";
+type Viewable = GConstructor<{
+    pos: Vec3
+    changed: boolean
+    notify(): void
+    acknowledge(): boolean
+}>
 
-import { rotationMatrix, scalingMatrix, translationMatrix, multiply3Matrix4x4 } from "@/utils/matrix";
-const { gl } = context
+function View<TBase extends Viewable>(Base: TBase) {
+    return class Viewing extends Base {
+        private _fov: number;
+        private _height: number;
+        private _width: number;
+        private _aspect: number;
+        private _near: number;
+        private _far: number;
+        private _proj: Matrix4x4
 
-export class Camera {
-    private bufid: number;
-    private uniid: number
-    private pos: Vec3;
-    private yaw: number;
-    private pitch: number;
-    private roll: number;
-    private scaler: number;
-    private updated: {
-        status: boolean,
-        trigger: () => void,
-        reset: () => void
-    }
+        private _up: Vec3;
+        private _right: Vec3;
+        private _forward: Vec3;
+        private _view: Matrix4x4
 
-    public constructor(
-        bufid: number,
-        pos?: Vec3,
-        yaw?: number,
-        pitch?: number,
-        roll?: number,
-        scaler?: number
-    ) {
-        this.pos = pos ? pos : [0, 0, 0];
-        this.yaw = yaw ? yaw : 0;
-        this.pitch = pitch ? pitch : 0;
-        this.roll = roll ? roll : 0;
-        this.scaler = scaler ? scaler : 1;
+        public constructor() {
+            super()
+            this._fov = 90;
+            this._height = canvas.height
+            this._width = canvas.width
+            this._aspect = canvas.width / canvas.height;
+            this._near = .1;
+            this._far = 1000;
+            this._proj = perspectiveProjection(this.fov, this.aspect, this.near, this.far)
 
-        // set updated to true to trigger initial update
-        this.updated = {
-            status: true,
-            trigger: function() { this.status = true },
-            reset: function() { this.status = false }
+            this._right = [1, 0, 0];
+            this._up = [0, 1, 0];
+            this._forward = [0, 0, -1];
+            this._view = viewMatrix(this.right, this.up, this.forward, this.pos)
         }
 
-        this.bufid = bufid
-
-        // setup initial conditions
-        const mm = multiply3Matrix4x4(
-            rotationMatrix(this.yaw, this.pitch, this.roll),
-            translationMatrix(this.pos[0], this.pos[1], this.pos[2]),
-            scalingMatrix(this.scaler)
-        )
-
-        this.uniid = glAssociateUniform('u_model', mm)
-    }
-
-    public render() {
-        glBindBuffers(this.bufid)
-        glBindUniform(this.uniid)
-        let indlen = glGetIndiceLength(this.bufid)
-        gl.drawElements(gl.TRIANGLES, indlen, gl.UNSIGNED_BYTE, 0);
-        glUnbindBuffers()
-    }
-
-    public update(elapsed: DOMHighResTimeStamp): void {
-        if (this.updated.status) {
-            this.updated.reset()
-            const mm = multiply3Matrix4x4(
-                rotationMatrix(this.yaw, this.pitch, this.roll),
-                translationMatrix(this.pos[0], this.pos[1], this.pos[2]),
-                scalingMatrix(this.scaler)
-            )
-            glUpdateUniformData(this.uniid, mm)
+        private bind(): void {
+            glBindUniform('u_proj', this.proj)
+            glBindUniform('u_view', this.view)
         }
-    }
 
-    public position(x: number, y: number, z: number) {
-        this.updated.trigger();
-        this.pos = [x, y, z]
-    }
+        public get fov(): number {
+            return this._fov
+        }
 
-    public translation(x: number, y: number, z: number) {
-        this.updated.trigger();
-        this.pos = [this.pos[0] + x, this.pos[1] + y, this.pos[2] + z]
-    }
+        public set fov(fov: number) {
+            this._fov = fov;
+        }
 
-    public orient(yaw: number, pitch: number, roll: number) {
-        this.updated.trigger();
-        this.yaw = yaw;
-        this.yaw = pitch;
-        this.roll = roll;
-    }
+        public get aspect(): number {
+            this._aspect = this.width / this.height;
+            return this._aspect;
+        }
 
-    public rotate(yaw: number, pitch: number, roll: number) {
-        this.updated.trigger();
-        this.yaw += yaw;
-        this.yaw += pitch;
-        this.roll += roll;
-    }
+        public get near(): number {
+            return this._near
+        }
 
-    public scale(scaler: number) {
-        this.updated.trigger();
-        this.scaler = scaler;
-    }
+        public set near(near: number) {
+            this._near = near;
+        }
 
-    public grow(sum: number) {
-        this.updated.trigger();
-        this.scaler += sum;
-    }
+        public get far(): number {
+            return this.far
+        }
 
-    public shrink(diff: number) {
-        this.updated.trigger();
-        if (this.scaler < diff) {
-            this.scaler = 0;
-        } else {
-            this.scaler -= diff
+        public set far(far: number) {
+            this._far = far;
+        }
+
+        public get proj(): Matrix4x4 {
+            return this._proj;
+        }
+
+        public get up(): Vec3 {
+            return this._up
+        }
+
+        public get right(): Vec3 {
+            return this._right
+        }
+
+        public get forward(): Vec3 {
+            return this._forward
+        }
+
+        public get view(): Matrix4x4 {
+            return this._view
+        }
+
+        public get width() {
+            if (this._width != canvas.width) {
+                this._width = canvas.width;
+            }
+            return this._width
+        }
+
+        public get height() {
+            if (this._height != canvas.height) {
+                this._height = canvas.height;
+            }
+            return this._height
         }
     }
 }
+
+export const Camera = View(Rotate(Position(Entity)));
