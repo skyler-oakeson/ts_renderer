@@ -1,6 +1,5 @@
 import { context } from "@/main";
-import { type FloatArr, type UintArr } from "@api/types";
-import { type Buffer } from "./buf";
+import { type FloatArr, type UintArr, type Buffer } from "@api/types";
 import { attrloc } from "./rendering";
 
 const { gl } = context

@@ -51,7 +51,6 @@ const render = () => {
 
 const update = (elapsed: DOMHighResTimeStamp) => {
     rabbit.rotate(1, 0, 0)
-    rabbit.translate([.001, 0, -.01, 0])
 }
 
 

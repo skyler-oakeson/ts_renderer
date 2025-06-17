@@ -1,5 +1,6 @@
 import { context } from "@/main";
 import {
+    type Buffer,
     type AttrLoc,
     type FloatArr,
     type UintArr,
@@ -7,7 +8,6 @@ import {
 } from "@api/types";
 import type { Matrix2x2, Matrix3x3, Matrix4x4, Vec2, Vec3, Vec4 } from "@math/types";
 import { GeometryBuffer } from "./geobuf";
-import { type Buffer } from "./buf";
 import { NormalBuffer } from "./normbuf";
 
 const { gl } = context;
@@ -167,7 +167,7 @@ export function glNewNormalBuffer(norms: FloatArr, ident: string, normalized = f
 
 //------------------------------------------------------------------
 //
-// Creates a new normal buffer
+// Returns a buffer from the buffer pool
 //
 //------------------------------------------------------------------
 export function glGetBuffer(id: number): Buffer {
@@ -203,7 +203,6 @@ export function glUnbindBuffers() {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
     gl.bindBuffer(gl.ARRAY_BUFFER, null)
 }
-
 
 //------------------------------------------------------------------
 //

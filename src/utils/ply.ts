@@ -1,6 +1,6 @@
 import { loadModel } from "@utils/load";
 import { calculateVertexNormals } from "@math/matrix";
-import type { FloatArr, UintArr } from "@/types/gl";
+import type { FloatArr } from "../types/gl";
 
 const VERTEX_OFFSET = 3
 const FACE_OFFSET = 3

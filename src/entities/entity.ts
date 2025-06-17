@@ -1,11 +1,11 @@
-import type { Matrix4x4, Vec3, Vec4 } from "@types/matrix"
+import type { Matrix4x4, Vec3, Vec4 } from "@math/matrix"
 import { context } from "@/main";
 import {
     glBindUniform,
     glGetBuffer,
     glUnbindBuffers,
 } from "@/api/rendering";
-import { rotationMatrix, scalingMatrix, translationMatrix, multiply3Matrix4x4, viewMatrix, transposeMatrix4x4 } from "@math/matrix";
+import { rotationMatrix, scalingMatrix, translationMatrix, multiply3Matrix4x4, viewMatrix, transposeMatrix4x4, inverseMatrix4x4 } from "@math/matrix";
 import type { Buffer } from "@/api/buf";
 const { gl, canvas } = context
 
@@ -257,9 +257,6 @@ export function Normalized<TBase extends Geometrical>(Base: TBase) {
         }
 
         public get nmat(): Matrix4x4 {
-            if (this.acknowledge()) {
-                // this._nmat = transposeMatrix4x4(inverseMatrix4x4(this.mmat))
-            }
             return this._nmat
         }
     }

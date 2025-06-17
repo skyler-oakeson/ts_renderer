@@ -1,4 +1,4 @@
-import type { Matrix4x4, Matrix3x3, Matrix2x2, Vec3 } from "./types"
+import type { Matrix4x4, Matrix3x3, Matrix2x2, Vec3 } from "@math/types"
 
 export const IDENTITY_MATRIX = [
     1, 0, 0, 0,
@@ -127,9 +127,6 @@ export function inverseMatrix4x4(m: Matrix4x4): Matrix4x4 | null {
         c03 * invDet, c13 * invDet, c23 * invDet, c33 * invDet
     ];
 }
-
-
-
 
 //------------------------------------------------------------------
 //
