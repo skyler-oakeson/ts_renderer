@@ -2,11 +2,12 @@ import type { Matrix4x4, Vec3, Vec4 } from "@types/matrix"
 import { context } from "@/main";
 import {
     glBindUniform,
-    glGetBuf,
+    glGetBuffer,
     glUnbindBuffers,
 } from "@/api/rendering";
 import { rotationMatrix, scalingMatrix, translationMatrix, multiply3Matrix4x4, viewMatrix, transposeMatrix4x4 } from "@/utils/matrix";
 import type { Buffer } from "@/api/buf";
+import { inverseMatrix4x4 } from "../math/matrix";
 const { gl, canvas } = context
 
 class Entity { }
@@ -219,7 +220,7 @@ export function Geometric<TBase extends Worldly>(Base: TBase) {
 
         public constructor(bufid: number, ...args: any[]) {
             super(args)
-            this._geobuf = glGetBuf(bufid)
+            this._geobuf = glGetBuffer(bufid)
         }
 
         public render() {
@@ -246,7 +247,7 @@ export function Normalized<TBase extends Geometrical>(Base: TBase) {
 
         public constructor(normid: number, ...args: any[]) {
             super(args)
-            this._normbuf = glGetBuf(normid)
+            this._normbuf = glGetBuffer(normid)
         }
 
         public render() {
@@ -258,7 +259,7 @@ export function Normalized<TBase extends Geometrical>(Base: TBase) {
 
         public get nmat(): Matrix4x4 {
             if (this.acknowledge()) {
-                // this._nmat = transpose of the inverse of this.mmat
+                // this._nmat = transposeMatrix4x4(inverseMatrix4x4(this.mmat))
             }
             return this._nmat
         }

@@ -4,8 +4,8 @@ import {
     type FloatArr,
     type UintArr,
     type UniLoc,
-} from "@types/gl";
-import type { Matrix2x2, Matrix3x3, Matrix4x4, Vec2, Vec3, Vec4 } from "@types/matrix";
+} from "@api/types";
+import type { Matrix2x2, Matrix3x3, Matrix4x4, Vec2, Vec3, Vec4 } from "@math/types";
 import { GeometryBuffer } from "./geobuf";
 import { type Buffer } from "./buf";
 import { NormalBuffer } from "./normbuf";
@@ -14,6 +14,7 @@ const { gl } = context;
 
 export const attrloc: AttrLoc = {}
 export const uniloc: UniLoc = {}
+let buf: Array<Buffer> = []
 
 const UNIFORM_MATRIX_BINDERS = {
     mat2: (context: WebGLRenderingContext,
@@ -146,16 +147,30 @@ function glRegisterIdentifierLocations(program: WebGLProgram, vertsrc: string) {
     })
 }
 
-let buf: Array<Buffer> = []
+//------------------------------------------------------------------
+//
+// Creates a new geometry buffer
+//
+//------------------------------------------------------------------
 export function glNewGeometryBuffer(verts: FloatArr, ind: UintArr, ident: string, normalized = false): number {
     return buf.push(new GeometryBuffer(verts, ind, ident, normalized)) - 1
 }
 
+//------------------------------------------------------------------
+//
+// Creates a new normal buffer
+//
+//------------------------------------------------------------------
 export function glNewNormalBuffer(norms: FloatArr, ident: string, normalized = false) {
     return buf.push(new NormalBuffer(norms, ident, normalized)) - 1
 }
 
-export function glGetBuf(id: number): Buffer {
+//------------------------------------------------------------------
+//
+// Creates a new normal buffer
+//
+//------------------------------------------------------------------
+export function glGetBuffer(id: number): Buffer {
     return buf[id]
 }
 

@@ -10,6 +10,7 @@ export default defineConfig({
             "@api": resolve(__dirname, './src/api'),
             "@shaders": resolve(__dirname, './src/shaders'),
             "@types": resolve(__dirname, './src/types'),
+            "@math": resolve(__dirname, './src/math'),
         }
     },
     server: {

@@ -26,6 +26,7 @@
       "@utils/*": ["./src/utils/*"],
       "@shaders/*": ["./src/shaders/*"],
       "@assets/*": ["./src/assets/*"],
+      "@math/*": ["./src/math/*"],
       "@types/*": ["./src/types/*"]
     }
   },

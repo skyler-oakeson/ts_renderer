@@ -1,17 +1,16 @@
 import { context } from "@/main";
 import vert from "@shaders/vertex.vert?raw"
 import frag from "@shaders/fragment.frag?raw"
-
 import {
     glCreateShaderProgram,
     glBindUniform,
     glNewGeometryBuffer,
     glNewNormalBuffer,
-} from "./api/rendering"
-import { orthographicProjection, perspectiveProjection } from "@utils/matrix";
+} from "@api/rendering"
+import { orthographicProjection, perspectiveProjection } from "@math/matrix";
 import { parsePly } from "@utils/ply";
 import { Geometry, NormalGeometry } from "./entities/entity";
-import { GeometryBuffer } from "./api/geobuf"
+import { GeometryBuffer } from "@api/geobuf"
 
 const { gl, canvas } = context;
 // stay at top of file or else we have no registered indentifiers
@@ -23,20 +22,22 @@ const far = 100;
 const aspect = canvas.width / canvas.height; // width / height
 const fov = 90;
 
+
 const parsed = await parsePly('bun_zipper.ply')
 let rabbitbufs = {
     geo: glNewGeometryBuffer(parsed.vertices, parsed.indices, 'a_pos'),
     norm: glNewNormalBuffer(parsed.normals, 'a_norm'),
 }
 
+
 glBindUniform('u_proj', perspectiveProjection(fov, aspect, near, far))
 glBindUniform('u_light_pos', [5, 10, 10])
 glBindUniform('u_light_color', [5, 10, 10])
-
 let rabbit = new NormalGeometry(rabbitbufs.norm, rabbitbufs.geo)
-
 rabbit.scale(2)
 rabbit.position([0, 0, -4])
+rabbit.translate([0, -1, -.5])
+
 
 const entities = [rabbit]
 const render = () => {
@@ -47,9 +48,12 @@ const render = () => {
     })
 }
 
+
 const update = (elapsed: DOMHighResTimeStamp) => {
     rabbit.rotate(1, 0, 0)
+    rabbit.translate([.001, 0, -.01, 0])
 }
+
 
 let prevTime = performance.now()
 let totalTime = 0;

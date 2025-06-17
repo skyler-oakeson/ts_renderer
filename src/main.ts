@@ -1,4 +1,4 @@
-import type { Context } from './types/context'
+import type { Context } from './types'
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <canvas id="canvas-main" width="${window.innerWidth}" height="${window.innerHeight}"></canvas>
