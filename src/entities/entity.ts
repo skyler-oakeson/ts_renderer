@@ -5,9 +5,8 @@ import {
     glGetBuffer,
     glUnbindBuffers,
 } from "@/api/rendering";
-import { rotationMatrix, scalingMatrix, translationMatrix, multiply3Matrix4x4, viewMatrix, transposeMatrix4x4 } from "@/utils/matrix";
+import { rotationMatrix, scalingMatrix, translationMatrix, multiply3Matrix4x4, viewMatrix, transposeMatrix4x4 } from "@math/matrix";
 import type { Buffer } from "@/api/buf";
-import { inverseMatrix4x4 } from "../math/matrix";
 const { gl, canvas } = context
 
 class Entity { }

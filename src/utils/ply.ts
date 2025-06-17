@@ -1,5 +1,5 @@
 import { loadModel } from "@utils/load";
-import { calculateVertexNormals } from "./matrix";
+import { calculateVertexNormals } from "@math/matrix";
 import type { FloatArr, UintArr } from "@/types/gl";
 
 const VERTEX_OFFSET = 3
