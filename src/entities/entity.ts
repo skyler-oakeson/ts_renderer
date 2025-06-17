@@ -1,14 +1,12 @@
 import type { Matrix4x4, Vec3, Vec4 } from "@types/matrix"
 import { context } from "@/main";
 import {
-    glBindBuffers,
     glBindUniform,
-    glGetIndiceLength,
+    glGetBuf,
     glUnbindBuffers,
 } from "@/api/rendering";
-import { perspectiveProjection, rotationMatrix, scalingMatrix, translationMatrix, multiply3Matrix4x4, viewMatrix } from "@/utils/matrix";
-import { loadModel } from "@/utils/load";
-import { parsePly } from "@/utils/ply";
+import { rotationMatrix, scalingMatrix, translationMatrix, multiply3Matrix4x4, viewMatrix, transposeMatrix4x4 } from "@/utils/matrix";
+import type { Buffer } from "@/api/buf";
 const { gl, canvas } = context
 
 class Entity { }
@@ -209,7 +207,6 @@ export function Scale<TBase extends Changeable>(Base: TBase) {
 export type Worldly = Scaleable & Positionable & Rotateable & Changeable
 
 export type Geometrical = GConstructor<{
-    bufid: number
     mmat: Matrix4x4
     render(): void
 }> & Worldly
@@ -217,29 +214,53 @@ export type Geometrical = GConstructor<{
 
 export function Geometric<TBase extends Worldly>(Base: TBase) {
     return class Geometry extends Base {
-        private _bufid: number;
+        private _geobuf: Buffer;
         private _mmat = multiply3Matrix4x4(this.rmat, this.tmat, this.smat)
 
         public constructor(bufid: number, ...args: any[]) {
             super(args)
-            this._bufid = bufid
+            this._geobuf = glGetBuf(bufid)
         }
 
-        render() {
-            glBindUniform("u_model", this.model)
-            glBindBuffers(this._bufid)
-            let indlen = glGetIndiceLength(this.bufid)
-            gl.drawElements(gl.TRIANGLES, indlen, gl.UNSIGNED_SHORT, 0);
+        public render() {
+            this._geobuf.bind()
+            glBindUniform("u_model", this.mmat)
+            gl.drawElements(gl.TRIANGLES, this._geobuf.length, gl.UNSIGNED_INT, 0);
             glUnbindBuffers()
         }
 
-        get model(): Matrix4x4 {
-            this._mmat = multiply3Matrix4x4(this.rmat, this.tmat, this.smat);
+        public get mmat(): Matrix4x4 {
+            if (this.acknowledge()) {
+                this._mmat = multiply3Matrix4x4(this.rmat, this.tmat, this.smat);
+            }
             return this._mmat
         }
+    }
+}
 
-        get bufid(): number {
-            return this._bufid
+
+export function Normalized<TBase extends Geometrical>(Base: TBase) {
+    return class Normals extends Base {
+        private _normbuf: Buffer;
+        private _nmat: Matrix4x4
+
+        public constructor(normid: number, ...args: any[]) {
+            super(args)
+            this._normbuf = glGetBuf(normid)
+        }
+
+        public render() {
+            this._normbuf.bind()
+            // glBindUniform("u_norm", this.nmat)
+            super.render()
+            this._normbuf.unbind()
+        }
+
+        public get nmat(): Matrix4x4 {
+            if (this.acknowledge()) {
+                // this._nmat = transpose of the inverse of this.mmat
+            }
+            return this._nmat
         }
     }
 }
@@ -250,7 +271,7 @@ export function Texture<TBase extends Geometrical>(Base: TBase) {
 }
 export const NonStaticEntity = Change(Entity)
 export const Geometry = Geometric(Rotate(Position(Scale(NonStaticEntity))));
-
+export const NormalGeometry = Normalized(Geometric(Rotate(Position(Scale(NonStaticEntity)))))
 
 
 

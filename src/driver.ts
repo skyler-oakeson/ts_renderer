@@ -4,14 +4,14 @@ import frag from "@shaders/fragment.frag?raw"
 
 import {
     glCreateShaderProgram,
-    glBindBuffers,
     glBindUniform,
-    glAssociateBuffers,
-    interleave,
+    glNewGeometryBuffer,
+    glNewNormalBuffer,
 } from "./api/rendering"
 import { orthographicProjection, perspectiveProjection } from "@utils/matrix";
 import { parsePly } from "@utils/ply";
-import { Geometry } from "./entities/entity";
+import { Geometry, NormalGeometry } from "./entities/entity";
+import { GeometryBuffer } from "./api/geobuf"
 
 const { gl, canvas } = context;
 // stay at top of file or else we have no registered indentifiers
@@ -23,45 +23,32 @@ const far = 100;
 const aspect = canvas.width / canvas.height; // width / height
 const fov = 90;
 
-
-const TRI_VERT_COL = new Float32Array([
-    -0.5, 0.5, -1.0, 1.0, 0.0, 0.0, 1.0,
-    - 0.5, -0.5, -1.0, 0.0, 1.0, 0.0, 1.0,
-    0.5, -0.5, -1.0, 0.0, 0.0, 1.0, 1.0
-]);
-
-const TRI_IND = new Uint8Array([
-    0, 1, 2
-]);
-
-const cubeParsed = await parsePly('bun_zipper.ply')
-let cubeInter = interleave({ arr: cubeParsed.vertices, elem: 3 }, { arr: cubeParsed.colors, elem: 4 }, { arr: cubeParsed.normals, elem: 3 })
-const models = {
-    triangle: glAssociateBuffers(TRI_VERT_COL, TRI_IND, { ident: 'a_pos', elem: 3 }, { ident: 'a_color', elem: 4 }),
-    cube: glAssociateBuffers(new Float32Array(cubeInter), new Uint16Array(cubeParsed.indices),
-        { ident: 'a_pos', elem: 3 },
-        { ident: 'a_color', elem: 4 },
-        { ident: 'a_norm', elem: 3 })
+const parsed = await parsePly('bun_zipper.ply')
+let rabbitbufs = {
+    geo: glNewGeometryBuffer(parsed.vertices, parsed.indices, 'a_pos'),
+    norm: glNewNormalBuffer(parsed.normals, 'a_norm'),
 }
 
 glBindUniform('u_proj', perspectiveProjection(fov, aspect, near, far))
 glBindUniform('u_light_pos', [5, 10, 10])
 glBindUniform('u_light_color', [5, 10, 10])
 
-let cube = new Geometry(models.cube)
-cube.scale(2)
-cube.position([0, 0, -4])
+let rabbit = new NormalGeometry(rabbitbufs.norm, rabbitbufs.geo)
 
-const entities = [cube]
+rabbit.scale(2)
+rabbit.position([0, 0, -4])
+
+const entities = [rabbit]
 const render = () => {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
     entities.forEach((entity) => {
         entity.render()
     })
 }
 
 const update = (elapsed: DOMHighResTimeStamp) => {
-    cube.rotate(1, 0, 0)
+    rabbit.rotate(1, 0, 0)
 }
 
 let prevTime = performance.now()

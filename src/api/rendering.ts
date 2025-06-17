@@ -3,19 +3,17 @@ import {
     type AttrLoc,
     type FloatArr,
     type UintArr,
-    type UniLocBind,
-    type AssocBuf,
-    type AssocUni,
-    type UniObj,
-    type AttrObj
+    type UniLoc,
 } from "@types/gl";
 import type { Matrix2x2, Matrix3x3, Matrix4x4, Vec2, Vec3, Vec4 } from "@types/matrix";
+import { GeometryBuffer } from "./geobuf";
+import { type Buffer } from "./buf";
+import { NormalBuffer } from "./normbuf";
 
 const { gl } = context;
 
-const attrloc: AttrLoc = {}
-const uniloc: UniLocBind = {}
-const assocbuf: Array<AttrObj> = []
+export const attrloc: AttrLoc = {}
+export const uniloc: UniLoc = {}
 
 const UNIFORM_MATRIX_BINDERS = {
     mat2: (context: WebGLRenderingContext,
@@ -98,6 +96,7 @@ function glCreateShader(type: GLenum, src: string): WebGLShader {
     return shader;
 }
 
+
 //------------------------------------------------------------------
 //
 // Creates a shader program from a fragment and vertex source string and returns it
@@ -147,78 +146,17 @@ function glRegisterIdentifierLocations(program: WebGLProgram, vertsrc: string) {
     })
 }
 
-
-//------------------------------------------------------------------
-//
-// Associates the vertex array buffer with its corresponding identifiers
-//
-//------------------------------------------------------------------
-let bufid = -1;
-export function glAssociateBuffers(
-    data: FloatArr,
-    ind: UintArr,
-    ...attrs: Array<{ ident: string, elem: number }>
-): number {
-    bufid += 1
-    // create webGL buffer object
-    const vertbuf = gl.createBuffer();
-    if (!vertbuf) {
-        console.error("Failed to allocate vertex buffer.")
-    }
-
-    // bind vertex buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertbuf)
-    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW)
-    gl.bindBuffer(gl.ARRAY_BUFFER, null)
-
-    const indbuf = gl.createBuffer();
-    if (!indbuf) {
-        console.error("Failed to allocate index buffer.")
-    }
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indbuf)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, ind, gl.STATIC_DRAW)
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
-
-    // get the amount of elements in each chunk
-    let elems = 0;
-    attrs.forEach((attrib) => {
-        elems += attrib.elem
-    })
-
-    // associate the needed values to bind the buffer
-    assocbuf.push({
-        vertbuf,
-        indbuf,
-        attrs,
-        bytes: data.BYTES_PER_ELEMENT,
-        stride: data.BYTES_PER_ELEMENT * elems,
-        indlen: ind.length,
-    })
-
-    // return bufid that can identify the AssocBuf when binding
-    return bufid;
+let buf: Array<Buffer> = []
+export function glNewGeometryBuffer(verts: FloatArr, ind: UintArr, ident: string, normalized = false): number {
+    return buf.push(new GeometryBuffer(verts, ind, ident, normalized)) - 1
 }
 
-//------------------------------------------------------------------
-//
-// Binds the associated array buffer to the vertex shader
-//
-//------------------------------------------------------------------
-export function glBindBuffers(assocbufid: number) {
-    let assoc = assocbuf[assocbufid]
-    // bind the vertex and index buffers
-    gl.bindBuffer(gl.ARRAY_BUFFER, assoc.vertbuf);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, assoc.indbuf)
+export function glNewNormalBuffer(norms: FloatArr, ident: string, normalized = false) {
+    return buf.push(new NormalBuffer(norms, ident, normalized)) - 1
+}
 
-    const { attrs, stride, bytes } = assoc;
-    // bind each associated attribute pointers to the correct position in the buffer
-    let offset = 0;
-    attrs.forEach((attrib: { ident: string, elem: number }) => {
-        const loc = attrloc[attrib.ident]
-        gl.enableVertexAttribArray(loc);
-        gl.vertexAttribPointer(loc, attrib.elem, gl.FLOAT, false, stride, offset * bytes)
-        offset += attrib.elem;
-    })
+export function glGetBuf(id: number): Buffer {
+    return buf[id]
 }
 
 //------------------------------------------------------------------
@@ -240,6 +178,7 @@ export function glBindUniform(ident: string, data: any) {
     }
 }
 
+
 //------------------------------------------------------------------
 //
 // Unbinds the array passed in as a list
@@ -253,21 +192,10 @@ export function glUnbindBuffers() {
 
 //------------------------------------------------------------------
 //
-// Returns the associated buffers index length
-//
-//------------------------------------------------------------------
-export function glGetIndiceLength(assocbufid: number) {
-    let assoc = assocbuf[assocbufid]
-    return assoc.indlen
-}
-
-
-//------------------------------------------------------------------
-//
 // Interleaves data from multiple arrays into one vertex array
 //
 //------------------------------------------------------------------
-export function interleave(...args: Array<{ arr: Array<number>, elem: number }>): Array<number> {
+function glInterleave(...args: Array<{ arr: Array<number>, elem: number }>): Array<number> {
     let cycles: number = -1;
     args.forEach(({ arr, elem }, index) => {
         cycles = -1 ? arr.length / elem : cycles
@@ -285,5 +213,4 @@ export function interleave(...args: Array<{ arr: Array<number>, elem: number }>)
 
     return interleaved
 }
-
 

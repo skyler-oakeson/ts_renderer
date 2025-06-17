@@ -1,14 +1,15 @@
 import { loadModel } from "@utils/load";
 import { calculateVertexNormals } from "./matrix";
+import type { FloatArr, UintArr } from "@/types/gl";
 
 const VERTEX_OFFSET = 3
 const FACE_OFFSET = 3
 
 interface Ply {
-    vertices: Array<number>
-    indices: Array<number>
-    colors: Array<number>
-    normals: Array<number>
+    vertices: FloatArr
+    indices: UintArr
+    colors: FloatArr
+    normals: FloatArr
 }
 
 
@@ -106,10 +107,10 @@ export async function parsePly(file: string): Promise<Ply> {
     vertices = convertToUnitSpace(vertices)
 
     return {
-        vertices,
-        indices,
-        colors,
-        normals: calculateVertexNormals(vertices, indices)
+        vertices: new Float32Array(vertices),
+        indices: new Uint32Array(indices),
+        colors: new Float32Array(colors),
+        normals: new Float32Array(calculateVertexNormals(vertices, indices))
     }
 }
 
