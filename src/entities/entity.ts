@@ -9,34 +9,34 @@ import { rotationMatrix, scalingMatrix, translationMatrix, multiply3Matrix4x4, v
 import type { Buffer } from "@/api/buf";
 const { gl, canvas } = context
 
-class Entity { }
+
 export type Constructor = new (...args: any[]) => {}
 export type GConstructor<T = {}> = new (...args: any[]) => T;
 
-export type Changeable = GConstructor<{
-    changed: boolean
-    notify(): void
-    acknowledge(): boolean
+class Entity { }
+
+export type Subscriber = GConstructor<{
+    update(): void
 }>
 
-export function Change<TBase extends Constructor>(Base: TBase) {
-    return class Changing extends Base {
-        private _changed = false
+export type Observable = GConstructor<{
+    subscribers: Array<() => void>
+    subscribe(update: () => void): void
+    notify(): void
+}>
 
-        notify(): void {
-            this._changed = true;
+export function Observe<TBase extends Constructor>(Base: TBase) {
+    return class Observing extends Base {
+        private _subscribers: Array<() => void> = []
+
+        public notify(): void {
+            this._subscribers.forEach((update) => {
+                update()
+            })
         }
 
-        acknowledge(): boolean {
-            if (this._changed) {
-                this._changed = false
-                return true
-            }
-            return false
-        }
-
-        get changed(): boolean {
-            return this._changed
+        public subscribe(update: () => void): void {
+            this._subscribers.push(update)
         }
     }
 }
@@ -48,9 +48,9 @@ export type Rotateable = GConstructor<{
     rmat: Matrix4x4
     orient(yaw: number, pitch: number, roll: number): void
     rotate(yaw: number, pitch: number, roll: number): void
-}> & Changeable
+}> & Observable
 
-export function Rotate<TBase extends Changeable>(Base: TBase) {
+export function Rotate<TBase extends Observable>(Base: TBase) {
     return class Rotating extends Base {
         private _yaw = 0;
         private _pitch = 0;
@@ -76,9 +76,9 @@ export function Rotate<TBase extends Changeable>(Base: TBase) {
         }
 
         public set yaw(yaw: number) {
-            this.notify()
             this._yaw = yaw
             this.rmat = rotationMatrix(this.yaw, this.pitch, this.roll)
+            this.notify()
         }
 
         public get pitch(): number {
@@ -86,9 +86,9 @@ export function Rotate<TBase extends Changeable>(Base: TBase) {
         }
 
         public set pitch(pitch: number) {
-            this.notify()
             this._pitch = pitch
             this.rmat = rotationMatrix(this.yaw, this.pitch, this.roll)
+            this.notify()
         }
 
         public get roll(): number {
@@ -96,9 +96,9 @@ export function Rotate<TBase extends Changeable>(Base: TBase) {
         }
 
         public set roll(roll: number) {
-            this.notify()
             this._roll = roll
             this.rmat = rotationMatrix(this.yaw, this.pitch, this.roll)
+            this.notify()
         }
 
         public get rmat(): Matrix4x4 {
@@ -106,8 +106,8 @@ export function Rotate<TBase extends Changeable>(Base: TBase) {
         }
 
         private set rmat(rmat: Matrix4x4) {
-            this.notify()
             this._rmat = rmat;
+            this.notify()
         }
     }
 }
@@ -118,9 +118,9 @@ export type Positionable = GConstructor<{
     tmat: Matrix4x4
     position(pos: Vec3): void
     translate(delta: Vec3): void
-}> & Changeable
+}> & Observable
 
-export function Position<TBase extends Changeable>(Base: TBase) {
+export function Position<TBase extends Observable>(Base: TBase) {
     return class Positioning extends Base {
         private _pos: Vec3 = [0, 0, 0]
         private _tmat: Matrix4x4 = translationMatrix(this._pos)
@@ -138,9 +138,9 @@ export function Position<TBase extends Changeable>(Base: TBase) {
         }
 
         private set pos(pos: Vec3) {
-            this.notify()
             this._pos = pos;
             this.tmat = translationMatrix(this._pos)
+            this.notify()
         }
 
         public get tmat(): Matrix4x4 {
@@ -148,8 +148,8 @@ export function Position<TBase extends Changeable>(Base: TBase) {
         }
 
         private set tmat(tmat: Matrix4x4) {
-            this.notify()
             this._tmat = tmat
+            this.notify()
         }
     }
 }
@@ -160,9 +160,9 @@ export type Scaleable = GConstructor<{
     scale(scale: number): void
     grow(scale: number): void
     shrink(scale: number): void
-}> & Changeable
+}> & Observable
 
-export function Scale<TBase extends Changeable>(Base: TBase) {
+export function Scale<TBase extends Observable>(Base: TBase) {
     return class Scaling extends Base {
         private _scaler = 1;
         private _smat = scalingMatrix(this._scaler)
@@ -188,9 +188,9 @@ export function Scale<TBase extends Changeable>(Base: TBase) {
         }
 
         private set scaler(scaler: number) {
-            this.notify()
             this.smat = scalingMatrix(scaler)
             this._scaler = scaler;
+            this.notify()
         }
 
         public get smat(): Matrix4x4 {
@@ -198,39 +198,13 @@ export function Scale<TBase extends Changeable>(Base: TBase) {
         }
 
         private set smat(smat: Matrix4x4) {
-            this.notify()
             this._smat = smat
+            this.notify()
         }
     }
 }
 
-export type Bindable = GConstructor<{
-    bindees: Array<Buffer>
-    register(buf: Buffer): void;
-    iterbind(): void;
-}>
-
-export function Binder<TBase extends Constructor>(Base: TBase) {
-    return class Bound extends Base {
-        private _bindees: Array<Buffer> = []
-
-        public register(buf: Buffer) {
-            this._bindees.push(buf)
-        }
-
-        public iterbind() {
-            this.bindees.forEach((buf: Buffer) => {
-                buf.bind()
-            })
-        }
-
-        get bindees(): Array<Buffer> {
-            return this._bindees
-        }
-    }
-}
-
-export type Worldly = Scaleable & Positionable & Rotateable & Changeable
+export type Worldly = Scaleable & Positionable & Rotateable & Subscriber
 
 export type Geometrical = GConstructor<{
     mmat: Matrix4x4
@@ -238,14 +212,18 @@ export type Geometrical = GConstructor<{
 }> & Worldly
 
 
-export function Geometric<TBase extends Worldly>(Base: TBase) {
+export function Geometric<TBase extends Worldly & Subscriber>(Base: TBase) {
     return class Geometry extends Base {
         private _geobuf: Buffer;
         private _mmat = multiply3Matrix4x4(this.rmat, this.tmat, this.smat)
+        private _upmmat = () => {
+            this._mmat = multiply3Matrix4x4(this.rmat, this.tmat, this.smat);
+        }
 
         public constructor(bufid: number, ...args: any[]) {
             super(args)
             this._geobuf = glGetBuffer(bufid)
+            this.subscribe(this._upmmat)
         }
 
         public render() {
@@ -256,9 +234,6 @@ export function Geometric<TBase extends Worldly>(Base: TBase) {
         }
 
         public get mmat(): Matrix4x4 {
-            if (this.acknowledge()) {
-                this._mmat = multiply3Matrix4x4(this.rmat, this.tmat, this.smat);
-            }
             return this._mmat
         }
     }
@@ -269,10 +244,14 @@ export function Normalized<TBase extends Geometrical>(Base: TBase) {
     return class Normals extends Base {
         private _normbuf: Buffer;
         private _nmat: Matrix4x4
+        private _upnmat = () => {
+            console.log("Inverse Transpose")
+        }
 
         public constructor(normid: number, ...args: any[]) {
             super(args)
             this._normbuf = glGetBuffer(normid)
+            this.subscribe(this._upnmat)
         }
 
         public render() {
@@ -304,10 +283,10 @@ export function Textured<TBase extends Geometrical>(Base: TBase) {
         }
     }
 }
-export const NonStaticEntity = Change(Entity)
-export const Geometry = Geometric(Binder(Rotate(Position(Scale(NonStaticEntity)))));
-export const NormalGeometry = Normalized(Geometric(Binder(Rotate(Position(Scale(NonStaticEntity))))))
-export const TextureNormalGeometry = Normalized(Geometric(Binder(Rotate(Position(Scale(NonStaticEntity))))))
+export const NonStaticEntity = Observe(Entity)
+export const Geometry = Geometric(Rotate(Position(Scale(NonStaticEntity))));
+export const NormalGeometry = Normalized(Geometric(Rotate(Position(Scale(NonStaticEntity)))))
+export const TextureNormalGeometry = Normalized(Geometric(Rotate(Position(Scale(NonStaticEntity)))))
 
 
 
@@ -455,3 +434,28 @@ export const TextureNormalGeometry = Normalized(Geometric(Binder(Rotate(Position
 // export const Light = Emit(Position(Change(Entity)))
 //
 //
+// export type Bindable = GConstructor<{
+//     bindees: Array<Buffer>
+//     register(buf: Buffer): void;
+//     iterbind(): void;
+// }>
+//
+// export function Binder<TBase extends Constructor>(Base: TBase) {
+//     return class Bound extends Base {
+//         private _bindees: Array<Buffer> = []
+//
+//         public register(buf: Buffer) {
+//             this._bindees.push(buf)
+//         }
+//
+//         public iterbind() {
+//             this.bindees.forEach((buf: Buffer) => {
+//                 buf.bind()
+//             })
+//         }
+//
+//         get bindees(): Array<Buffer> {
+//             return this._bindees
+//         }
+//     }
+// }
