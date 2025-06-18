@@ -204,6 +204,32 @@ export function Scale<TBase extends Changeable>(Base: TBase) {
     }
 }
 
+export type Bindable = GConstructor<{
+    bindees: Array<Buffer>
+    register(buf: Buffer): void;
+    iterbind(): void;
+}>
+
+export function Binder<TBase extends Constructor>(Base: TBase) {
+    return class Bound extends Base {
+        private _bindees: Array<Buffer> = []
+
+        public register(buf: Buffer) {
+            this._bindees.push(buf)
+        }
+
+        public iterbind() {
+            this.bindees.forEach((buf: Buffer) => {
+                buf.bind()
+            })
+        }
+
+        get bindees(): Array<Buffer> {
+            return this._bindees
+        }
+    }
+}
+
 export type Worldly = Scaleable & Positionable & Rotateable & Changeable
 
 export type Geometrical = GConstructor<{
@@ -262,13 +288,26 @@ export function Normalized<TBase extends Geometrical>(Base: TBase) {
     }
 }
 
-export function Texture<TBase extends Geometrical>(Base: TBase) {
+export function Textured<TBase extends Geometrical>(Base: TBase) {
     return class Texturing extends Base {
+        private _texbuf: Buffer;
+
+        public constructor(texid: number, ...args: any[]) {
+            super(args)
+            this._texbuf = glGetBuffer(texid)
+        }
+
+        public render() {
+            this._texbuf.bind()
+            super.render()
+            this._texbuf.unbind()
+        }
     }
 }
 export const NonStaticEntity = Change(Entity)
-export const Geometry = Geometric(Rotate(Position(Scale(NonStaticEntity))));
-export const NormalGeometry = Normalized(Geometric(Rotate(Position(Scale(NonStaticEntity)))))
+export const Geometry = Geometric(Binder(Rotate(Position(Scale(NonStaticEntity)))));
+export const NormalGeometry = Normalized(Geometric(Binder(Rotate(Position(Scale(NonStaticEntity))))))
+export const TextureNormalGeometry = Normalized(Geometric(Binder(Rotate(Position(Scale(NonStaticEntity))))))
 
 
 
