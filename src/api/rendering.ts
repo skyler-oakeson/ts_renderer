@@ -9,6 +9,7 @@ import {
 import type { Matrix2x2, Matrix3x3, Matrix4x4, Vec2, Vec3, Vec4 } from "@math/types";
 import { GeometryBuffer } from "./geobuf";
 import { NormalBuffer } from "./normbuf";
+import { TextureBuffer } from "./texbuf";
 
 const { gl } = context;
 
@@ -44,6 +45,9 @@ const UNIFORM_VECTOR_BINDERS = {
     vec4: (context: WebGLRenderingContext,
         loc: WebGLUniformLocation,
         val: Vec4) => { context.uniform4fv(loc, val) },
+}
+
+const UNIFORM_INT_BINDERS = {
 }
 
 function resizeCanvas() {
@@ -112,6 +116,7 @@ export function glCreateShaderProgram(vertsrc: string, fragsrc: string): WebGLPr
     gl.linkProgram(program);
 
     glRegisterIdentifierLocations(program, vertsrc)
+    glRegisterIdentifierLocations(program, fragsrc)
 
     return program
 }
@@ -163,6 +168,15 @@ export function glNewGeometryBuffer(verts: FloatArr, ind: UintArr, ident: string
 //------------------------------------------------------------------
 export function glNewNormalBuffer(norms: FloatArr, ident: string, normalized = false) {
     return buf.push(new NormalBuffer(norms, ident, normalized)) - 1
+}
+
+//------------------------------------------------------------------
+//
+// Creates a new texture buffer
+//
+//------------------------------------------------------------------
+export function glNewTextureBuffer(uvs: FloatArr, image: HTMLImageElement, ident: string) {
+    return buf.push(new TextureBuffer(uvs, image, ident)) - 1
 }
 
 //------------------------------------------------------------------

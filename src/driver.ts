@@ -6,10 +6,13 @@ import {
     glBindUniform,
     glNewGeometryBuffer,
     glNewNormalBuffer,
+    glNewTextureBuffer,
+    glGetBuffer
 } from "@api/rendering"
 import { orthographicProjection, perspectiveProjection } from "@math/matrix";
 import { parsePly } from "@utils/ply";
 import { Geometry, NormalGeometry, TextureNormalGeometry } from "./entities/entity";
+import { loadTexture } from "./utils/load";
 
 const { gl, canvas } = context;
 // stay at top of file or else we have no registered indentifiers
@@ -22,23 +25,22 @@ const aspect = canvas.width / canvas.height; // width / height
 const fov = 90;
 
 
-const parsed = await parsePly('dragon_vrip.ply')
+const parsed = await parsePly('bunny.ply')
+const texture = await loadTexture('bunny.png')
+
 let rabbitbufs = {
     geo: glNewGeometryBuffer(parsed.vertices, parsed.indices, 'a_pos'),
     norm: glNewNormalBuffer(parsed.normals, 'a_norm'),
+    tex: glNewTextureBuffer(parsed.uvs, texture, 'a_uv'),
 }
 
-
 glBindUniform('u_proj', perspectiveProjection(fov, aspect, near, far))
-glBindUniform('u_light_pos', [5, 10, 10])
-glBindUniform('u_light_color', [5, 10, 10])
+glBindUniform('u_light_pos', [1, 1, 1])
+glBindUniform('u_light_color', [1, 1, 1])
 
-
-let rabbit = new TextureNormalGeometry(rabbitbufs.norm, rabbitbufs.geo)
-rabbit.scale(2)
-rabbit.position([0, 0, -4])
-rabbit.translate([0, -1, -.5])
-
+let rabbit = new TextureNormalGeometry(rabbitbufs.tex, rabbitbufs.norm, rabbitbufs.geo)
+rabbit.scale(1)
+rabbit.position([0, -.5, -1.5])
 
 const entities = [rabbit]
 const render = () => {

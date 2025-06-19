@@ -15,12 +15,7 @@ export type GConstructor<T = {}> = new (...args: any[]) => T;
 
 class Entity { }
 
-export type Subscriber = GConstructor<{
-    update(): void
-}>
-
 export type Observable = GConstructor<{
-    subscribers: Array<() => void>
     subscribe(update: () => void): void
     notify(): void
 }>
@@ -204,15 +199,38 @@ export function Scale<TBase extends Observable>(Base: TBase) {
     }
 }
 
-export type Worldly = Scaleable & Positionable & Rotateable & Subscriber
+export type Worldly = Scaleable & Positionable & Rotateable
+
+
+export type Bindable = GConstructor<{
+    bind(): void
+    register(buf: Buffer): void
+}>
+
+export function Binder<TBase extends Constructor>(Base: TBase) {
+    return class Binding extends Base {
+        private _bindees: Array<Buffer> = []
+
+        public bind(): void {
+            this._bindees.forEach((buf) => {
+                buf.bind()
+            })
+        }
+
+        public register(buf: Buffer): void {
+            this._bindees.push(buf)
+        }
+    }
+}
+
 
 export type Geometrical = GConstructor<{
     mmat: Matrix4x4
     render(): void
-}> & Worldly
+}> & Worldly & Bindable
 
 
-export function Geometric<TBase extends Worldly & Subscriber>(Base: TBase) {
+export function Geometric<TBase extends Worldly & Bindable>(Base: TBase) {
     return class Geometry extends Base {
         private _geobuf: Buffer;
         private _mmat = multiply3Matrix4x4(this.rmat, this.tmat, this.smat)
@@ -220,14 +238,15 @@ export function Geometric<TBase extends Worldly & Subscriber>(Base: TBase) {
             this._mmat = multiply3Matrix4x4(this.rmat, this.tmat, this.smat);
         }
 
-        public constructor(bufid: number, ...args: any[]) {
-            super(args)
-            this._geobuf = glGetBuffer(bufid)
+        public constructor(geoid: number, ...args: any[]) {
+            super(...args)
+            this._geobuf = glGetBuffer(geoid)
             this.subscribe(this._upmmat)
+            this.register(this._geobuf)
         }
 
         public render() {
-            this._geobuf.bind()
+            this.bind()
             glBindUniform("u_model", this.mmat)
             gl.drawElements(gl.TRIANGLES, this._geobuf.length, gl.UNSIGNED_INT, 0);
             glUnbindBuffers()
@@ -245,20 +264,18 @@ export function Normalized<TBase extends Geometrical>(Base: TBase) {
         private _normbuf: Buffer;
         private _nmat: Matrix4x4
         private _upnmat = () => {
-            console.log("Inverse Transpose")
+            // TODO calculate the transpose inverse of the mmat on CPU instead of on GPU for efficiency
         }
 
         public constructor(normid: number, ...args: any[]) {
-            super(args)
+            super(...args)
             this._normbuf = glGetBuffer(normid)
-            this.subscribe(this._upnmat)
+            this.register(this._normbuf)
         }
 
         public render() {
-            this._normbuf.bind()
             // glBindUniform("u_norm", this.nmat)
             super.render()
-            this._normbuf.unbind()
         }
 
         public get nmat(): Matrix4x4 {
@@ -272,21 +289,22 @@ export function Textured<TBase extends Geometrical>(Base: TBase) {
         private _texbuf: Buffer;
 
         public constructor(texid: number, ...args: any[]) {
-            super(args)
+            super(...args)
             this._texbuf = glGetBuffer(texid)
+            this.register(this._texbuf)
         }
 
         public render() {
-            this._texbuf.bind()
             super.render()
-            this._texbuf.unbind()
         }
     }
 }
+
+
 export const NonStaticEntity = Observe(Entity)
-export const Geometry = Geometric(Rotate(Position(Scale(NonStaticEntity))));
-export const NormalGeometry = Normalized(Geometric(Rotate(Position(Scale(NonStaticEntity)))))
-export const TextureNormalGeometry = Normalized(Geometric(Rotate(Position(Scale(NonStaticEntity)))))
+export const Geometry = Geometric(Binder(Rotate(Position(Scale(NonStaticEntity)))));
+export const NormalGeometry = Normalized(Geometry)
+export const TextureNormalGeometry = Textured(NormalGeometry)
 
 
 
