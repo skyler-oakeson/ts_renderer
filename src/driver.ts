@@ -25,24 +25,34 @@ const aspect = canvas.width / canvas.height; // width / height
 const fov = 90;
 
 
-const parsed = await parsePly('bunny.ply')
+let parsed = await parsePly('bunny.ply')
 const texture = await loadTexture('bunny.png')
-
 let rabbitbufs = {
     geo: glNewGeometryBuffer(parsed.vertices, parsed.indices, 'a_pos'),
     norm: glNewNormalBuffer(parsed.normals, 'a_norm'),
     tex: glNewTextureBuffer(parsed.uvs, texture, 'a_uv'),
 }
 
+parsed = await parsePly('dragon_vrip.ply')
+let dragonbufs = {
+    geo: glNewGeometryBuffer(parsed.vertices, parsed.indices, 'a_pos'),
+    norm: glNewNormalBuffer(parsed.normals, 'a_norm'),
+}
+
 glBindUniform('u_proj', perspectiveProjection(fov, aspect, near, far))
-glBindUniform('u_light_pos', [1, 1, 1])
+glBindUniform('u_light_pos', [0, 1, 1])
 glBindUniform('u_light_color', [1, 1, 1])
+glBindUniform('u_mode', 4)
 
 let rabbit = new TextureNormalGeometry(rabbitbufs.tex, rabbitbufs.norm, rabbitbufs.geo)
 rabbit.scale(1)
-rabbit.position([0, -.5, -1.5])
+rabbit.position([0, -.5, -1])
 
-const entities = [rabbit]
+let dragon = new NormalGeometry(dragonbufs.norm, dragonbufs.geo)
+dragon.scale(1)
+dragon.position([0, -.5, -1])
+
+const entities = [dragon]
 const render = () => {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -53,7 +63,7 @@ const render = () => {
 
 
 const update = (elapsed: DOMHighResTimeStamp) => {
-    rabbit.rotate(1, 0, 0)
+    dragon.rotate(1, 0, 0)
 }
 
 

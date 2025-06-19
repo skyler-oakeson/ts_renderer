@@ -18,36 +18,45 @@ export const uniloc: UniLoc = {}
 let buf: Array<Buffer> = []
 
 const UNIFORM_MATRIX_BINDERS = {
-    mat2: (context: WebGLRenderingContext,
+    "mat2": (context: WebGLRenderingContext,
         loc: WebGLUniformLocation,
         transpose: boolean,
         val: Matrix2x2) => { context.uniformMatrix2fv(loc, transpose, val) },
-    mat3: (context: WebGLRenderingContext,
+    "mat3": (context: WebGLRenderingContext,
         loc: WebGLUniformLocation,
         transpose: boolean,
         val: Matrix3x3) => { context.uniformMatrix3fv(loc, transpose, val) },
-    mat4: (context: WebGLRenderingContext,
+    "mat4": (context: WebGLRenderingContext,
         loc: WebGLUniformLocation,
         transpose: boolean,
         val: Matrix4x4) => { context.uniformMatrix4fv(loc, transpose, val) }
 }
 
-const UNIFORM_VECTOR_BINDERS = {
-    float: (context: WebGLRenderingContext,
+const UNIFORM_BINDERS = {
+    "float": (context: WebGLRenderingContext,
         loc: WebGLUniformLocation,
         val: GLfloat) => { context.uniform1f(loc, val) },
-    vec2: (context: WebGLRenderingContext,
+    "vec2": (context: WebGLRenderingContext,
         loc: WebGLUniformLocation,
         val: Vec2) => { context.uniform2fv(loc, val) },
-    vec3: (context: WebGLRenderingContext,
+    "vec3": (context: WebGLRenderingContext,
         loc: WebGLUniformLocation,
         val: Vec3) => { context.uniform3fv(loc, val) },
-    vec4: (context: WebGLRenderingContext,
+    "vec4": (context: WebGLRenderingContext,
         loc: WebGLUniformLocation,
         val: Vec4) => { context.uniform4fv(loc, val) },
-}
-
-const UNIFORM_INT_BINDERS = {
+    "int": (context: WebGLRenderingContext,
+        loc: WebGLUniformLocation,
+        val: GLint) => { context.uniform1i(loc, val) },
+    "ivec2": (context: WebGLRenderingContext,
+        loc: WebGLUniformLocation,
+        val: Vec2) => { context.uniform2iv(loc, val) },
+    "ivec3": (context: WebGLRenderingContext,
+        loc: WebGLUniformLocation,
+        val: Vec3) => { context.uniform3iv(loc, val) },
+    "ivec4": (context: WebGLRenderingContext,
+        loc: WebGLUniformLocation,
+        val: Vec4) => { context.uniform4iv(loc, val) },
 }
 
 function resizeCanvas() {
@@ -198,12 +207,8 @@ export function glBindUniform(ident: string, data: any) {
 
     if (type.startsWith("mat")) {
         UNIFORM_MATRIX_BINDERS[type](gl, loc, false, data)
-        return
-    }
-
-    if (type.startsWith("vec")) {
-        UNIFORM_VECTOR_BINDERS[type](gl, loc, data)
-        return
+    } else {
+        UNIFORM_BINDERS[type](gl, loc, data)
     }
 }
 

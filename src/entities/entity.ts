@@ -234,6 +234,8 @@ export function Geometric<TBase extends Worldly & Bindable>(Base: TBase) {
     return class Geometry extends Base {
         private _geobuf: Buffer;
         private _mmat = multiply3Matrix4x4(this.rmat, this.tmat, this.smat)
+
+        // updates mmat if there are changes to the rmat, tmat, or smat
         private _upmmat = () => {
             this._mmat = multiply3Matrix4x4(this.rmat, this.tmat, this.smat);
         }
@@ -263,6 +265,8 @@ export function Normalized<TBase extends Geometrical>(Base: TBase) {
     return class Normals extends Base {
         private _normbuf: Buffer;
         private _nmat: Matrix4x4
+
+        // updates nmat if there are changes to the mmat
         private _upnmat = () => {
             // TODO calculate the transpose inverse of the mmat on CPU instead of on GPU for efficiency
         }
