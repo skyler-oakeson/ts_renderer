@@ -221,6 +221,7 @@ export function glBindUniform(ident: string, data: any) {
 export function glUnbindBuffers() {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
     gl.bindBuffer(gl.ARRAY_BUFFER, null)
+    gl.bindTexture(gl.TEXTURE_2D, null)
 }
 
 //------------------------------------------------------------------

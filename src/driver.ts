@@ -40,19 +40,19 @@ let dragonbufs = {
 }
 
 glBindUniform('u_proj', perspectiveProjection(fov, aspect, near, far))
-glBindUniform('u_light_pos', [0, 1, 1])
+glBindUniform('u_light_pos', [0, 7, 12])
 glBindUniform('u_light_color', [1, 1, 1])
-glBindUniform('u_mode', 4)
+glBindUniform('u_shine', 34.0)
 
 let rabbit = new TextureNormalGeometry(rabbitbufs.tex, rabbitbufs.norm, rabbitbufs.geo)
-rabbit.scale(1)
-rabbit.position([0, -.5, -1])
+rabbit.scale(2)
+rabbit.position([.8, -.5, -3])
 
 let dragon = new NormalGeometry(dragonbufs.norm, dragonbufs.geo)
-dragon.scale(1)
-dragon.position([0, -.5, -1])
+dragon.scale(2)
+dragon.position([-.8, -.5, -3])
 
-const entities = [dragon]
+const entities = [rabbit, dragon]
 const render = () => {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -62,8 +62,17 @@ const render = () => {
 }
 
 
+let counter = 0;
+let mode = 0;
 const update = (elapsed: DOMHighResTimeStamp) => {
     dragon.rotate(1, 0, 0)
+    rabbit.rotate(1, 0, 0)
+    counter += elapsed;
+    if (counter > 5000 && mode < 4) {
+        mode += 1
+        glBindUniform('u_mode', mode)
+        counter = 0
+    }
 }
 
 
