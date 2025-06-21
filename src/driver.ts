@@ -11,7 +11,7 @@ import {
 } from "@api/rendering"
 import { orthographicProjection, perspectiveProjection } from "@math/matrix";
 import { parsePly } from "@utils/ply";
-import { Geometry, NormalGeometry, TextureNormalGeometry } from "./entities/entity";
+import { NormalGeometry, TexturedNormal } from "./entities/entity";
 import { loadTexture } from "./utils/load";
 
 const { gl, canvas } = context;
@@ -44,7 +44,7 @@ glBindUniform('u_light_pos', [0, 7, 12])
 glBindUniform('u_light_color', [1, 1, 1])
 glBindUniform('u_shine', 34.0)
 
-let rabbit = new TextureNormalGeometry(rabbitbufs.tex, rabbitbufs.norm, rabbitbufs.geo)
+let rabbit = new TexturedNormal(rabbitbufs.tex, rabbitbufs.norm, rabbitbufs.geo)
 rabbit.scale(2)
 rabbit.position([.8, -.5, -3])
 
@@ -67,6 +67,11 @@ let mode = 0;
 const update = (elapsed: DOMHighResTimeStamp) => {
     dragon.rotate(1, 0, 0)
     rabbit.rotate(1, 0, 0)
+
+    entities.forEach((entity) => {
+        entity.update()
+    })
+
     counter += elapsed;
     if (counter > 5000 && mode < 4) {
         mode += 1

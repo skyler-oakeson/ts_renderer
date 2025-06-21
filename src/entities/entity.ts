@@ -7,31 +7,52 @@ import {
 } from "@/api/rendering";
 import { rotationMatrix, scalingMatrix, translationMatrix, multiply3Matrix4x4, viewMatrix, transposeMatrix4x4, inverseMatrix4x4 } from "@math/matrix";
 import type { Buffer } from "@/api/buf";
+import { perspectiveProjection } from "@math/matrix";
 const { gl, canvas } = context
 
 
 export type Constructor = new (...args: any[]) => {}
 export type GConstructor<T = {}> = new (...args: any[]) => T;
 
-class Entity { }
+
+class Base { }
+export const Entity = Rotate(Position(Scale(Observe(Base))));
+export const GeometryEnity = Geometric(Binder(Entity));
+export const NormalGeometry = Normalized(GeometryEnity)
+export const TexturedNormal = Textured(NormalGeometry)
+export const Camera = View(Binder(Entity))
 
 export type Observable = GConstructor<{
     subscribe(update: () => void): void
     notify(): void
+    update(): void
 }>
 
 export function Observe<TBase extends Constructor>(Base: TBase) {
     return class Observing extends Base {
-        private _subscribers: Array<() => void> = []
+        private _updates: Array<() => void> = []
+        private _updated: boolean = false;
 
-        public notify(): void {
-            this._subscribers.forEach((update) => {
-                update()
-            })
+        public constructor(...args: Array<any>) {
+            super(...args)
         }
 
-        public subscribe(update: () => void): void {
-            this._subscribers.push(update)
+        public subscribe(update: () => void) {
+            this._updates.push(update)
+            console.log(this._updates)
+        }
+
+        public notify(): void {
+            this._updated = true;
+        }
+
+        public update(): void {
+            if (this._updated) {
+                this._updates.forEach((update) => {
+                    update()
+                })
+            }
+            this._updated = false;
         }
     }
 }
@@ -199,9 +220,6 @@ export function Scale<TBase extends Observable>(Base: TBase) {
     }
 }
 
-export type Worldly = Scaleable & Positionable & Rotateable
-
-
 export type Bindable = GConstructor<{
     bind(): void
     register(buf: Buffer): void
@@ -217,8 +235,18 @@ export function Binder<TBase extends Constructor>(Base: TBase) {
             })
         }
 
+        public unbind(): void {
+            this._bindees.forEach((buf) => {
+                buf.unbind()
+            })
+        }
+
         public register(buf: Buffer): void {
             this._bindees.push(buf)
+        }
+
+        public get bindees(): Array<Buffer> {
+            return this._bindees
         }
     }
 }
@@ -227,10 +255,10 @@ export function Binder<TBase extends Constructor>(Base: TBase) {
 export type Geometrical = GConstructor<{
     mmat: Matrix4x4
     render(): void
-}> & Worldly & Bindable
+}> & Bindable & Positionable
 
 
-export function Geometric<TBase extends Worldly & Bindable>(Base: TBase) {
+export function Geometric<TBase extends Bindable & typeof Entity>(Base: TBase) {
     return class Geometry extends Base {
         private _geobuf: Buffer;
         private _mmat = multiply3Matrix4x4(this.rmat, this.tmat, this.smat)
@@ -257,6 +285,10 @@ export function Geometric<TBase extends Worldly & Bindable>(Base: TBase) {
         public get mmat(): Matrix4x4 {
             return this._mmat
         }
+
+        public set mmat(mmat: Matrix4x4) {
+            this.notify();
+        }
     }
 }
 
@@ -266,14 +298,15 @@ export function Normalized<TBase extends Geometrical>(Base: TBase) {
         private _normbuf: Buffer;
         private _nmat: Matrix4x4
 
-        // updates nmat if there are changes to the mmat
+        // updates nmat if there are changes rmat, tmat, or smat which would result in a new mmat
+        // beacuse this registers the update second we don't need to worry about mmat not updating first
         private _upnmat = () => {
-            // TODO calculate the transpose inverse of the mmat on CPU instead of on GPU for efficiency
         }
 
         public constructor(normid: number, ...args: any[]) {
             super(...args)
             this._normbuf = glGetBuffer(normid)
+            this.subscribe(this._upnmat)
             this.register(this._normbuf)
         }
 
@@ -305,179 +338,100 @@ export function Textured<TBase extends Geometrical>(Base: TBase) {
 }
 
 
-export const NonStaticEntity = Observe(Entity)
-export const Geometry = Geometric(Binder(Rotate(Position(Scale(NonStaticEntity)))));
-export const NormalGeometry = Normalized(Geometry)
-export const TextureNormalGeometry = Textured(NormalGeometry)
-
-
-
 // TODO Under construction. Finish assignment first 
-// type Viewable = GConstructor<{
-//     pos: Vec3
-//     changed: boolean
-//     notify(): void
-//     acknowledge(): boolean
-// }>
-//
-// function View<TBase extends Viewable>(Base: TBase) {
-//     return class Viewing extends Base {
-//         private _fov: number;
-//         private _height: number;
-//         private _width: number;
-//         private _aspect: number;
-//         private _near: number;
-//         private _far: number;
-//         private _proj: Matrix4x4
-//
-//         private _up: Vec3;
-//         private _right: Vec3;
-//         private _forward: Vec3;
-//         private _view: Matrix4x4
-//
-//         public constructor() {
-//             super()
-//             this._fov = 90;
-//             this._height = canvas.height
-//             this._width = canvas.width
-//             this._aspect = canvas.width / canvas.height;
-//             this._near = .1;
-//             this._far = 1000;
-//             this._proj = perspectiveProjection(this.fov, this.aspect, this.near, this.far)
-//
-//             this._right = [1, 0, 0];
-//             this._up = [0, 1, 0];
-//             this._forward = [0, 0, -1];
-//             this._view = viewMatrix(this.right, this.up, this.forward, this.pos)
-//         }
-//
-//         private bind(): void {
-//             glBindUniform('u_proj', this.proj)
-//             glBindUniform('u_view', this.view)
-//         }
-//
-//         public get fov(): number {
-//             return this._fov
-//         }
-//
-//         public set fov(fov: number) {
-//             this._fov = fov;
-//         }
-//
-//         public get aspect(): number {
-//             this._aspect = this.width / this.height;
-//             return this._aspect;
-//         }
-//
-//         public get near(): number {
-//             return this._near
-//         }
-//
-//         public set near(near: number) {
-//             this._near = near;
-//         }
-//
-//         public get far(): number {
-//             return this.far
-//         }
-//
-//         public set far(far: number) {
-//             this._far = far;
-//         }
-//
-//         public get proj(): Matrix4x4 {
-//             return this._proj;
-//         }
-//
-//         public get up(): Vec3 {
-//             return this._up
-//         }
-//
-//         public get right(): Vec3 {
-//             return this._right
-//         }
-//
-//         public get forward(): Vec3 {
-//             return this._forward
-//         }
-//
-//         public get view(): Matrix4x4 {
-//             return this._view
-//         }
-//
-//         public get width() {
-//             if (this._width != canvas.width) {
-//                 this._width = canvas.width;
-//             }
-//             return this._width
-//         }
-//
-//         public get height() {
-//             if (this._height != canvas.height) {
-//                 this._height = canvas.height;
-//             }
-//             return this._height
-//         }
-//     }
-// }
-//
-// export const Camera = View(Rotate(Position(Entity)));
-//
-// type Emitable = GConstructor<{
-//     pos: Vec3
-// }>
-//
-//
-// function Emit<TBase extends Emitable>(Base: TBase) {
-//     return class Emitting extends Base {
-//         private _color: Vec4;
-//
-//         public constructor(color?: Vec4, ...args: any[]) {
-//             super(...args)
-//             this._color = color ? color : [0, 0, 0, 0];
-//         }
-//
-//         private bind() {
-//             glBindUniform('u_light_pos', this.pos)
-//             glBindUniform('u_light_color', this.color)
-//         }
-//
-//         public get color() {
-//             return this._color
-//         }
-//
-//         public set color(color: Vec4) {
-//             this._color = color;
-//             this.bind()
-//         }
-//     }
-// }
-//
-// export const Light = Emit(Position(Change(Entity)))
-//
-//
-// export type Bindable = GConstructor<{
-//     bindees: Array<Buffer>
-//     register(buf: Buffer): void;
-//     iterbind(): void;
-// }>
-//
-// export function Binder<TBase extends Constructor>(Base: TBase) {
-//     return class Bound extends Base {
-//         private _bindees: Array<Buffer> = []
-//
-//         public register(buf: Buffer) {
-//             this._bindees.push(buf)
-//         }
-//
-//         public iterbind() {
-//             this.bindees.forEach((buf: Buffer) => {
-//                 buf.bind()
-//             })
-//         }
-//
-//         get bindees(): Array<Buffer> {
-//             return this._bindees
-//         }
-//     }
-// }
+type Viewable = GConstructor<{ pos: Vec3 }>
+function View<TBase extends Bindable>(Base: TBase) {
+    return class Viewing extends Base {
+        private _fov: number;
+        private _height: number;
+        private _width: number;
+        private _aspect: number;
+        private _near: number;
+        private _far: number;
+        private _proj: Matrix4x4
+
+        private _up: Vec3;
+        private _right: Vec3;
+        private _forward: Vec3;
+        private _view: Matrix4x4
+
+        public constructor() {
+            super()
+            this._fov = 90;
+            this._height = canvas.height
+            this._width = canvas.width
+            this._aspect = canvas.width / canvas.height;
+            this._near = .1;
+            this._far = 1000;
+            this._proj = perspectiveProjection(this.fov, this.aspect, this.near, this.far)
+
+            this._right = [1, 0, 0];
+            this._up = [0, 1, 0];
+            this._forward = [0, 0, -1];
+            this._view = viewMatrix(this.right, this.up, this.forward, this.pos)
+        }
+
+        public get fov(): number {
+            return this._fov
+        }
+
+        public set fov(fov: number) {
+            this._fov = fov;
+        }
+
+        public get aspect(): number {
+            this._aspect = this.width / this.height;
+            return this._aspect;
+        }
+
+        public get near(): number {
+            return this._near
+        }
+
+        public set near(near: number) {
+            this._near = near;
+        }
+
+        public get far(): number {
+            return this.far
+        }
+
+        public set far(far: number) {
+            this._far = far;
+        }
+
+        public get proj(): Matrix4x4 {
+            return this._proj;
+        }
+
+        public get up(): Vec3 {
+            return this._up
+        }
+
+        public get right(): Vec3 {
+            return this._right
+        }
+
+        public get forward(): Vec3 {
+            return this._forward
+        }
+
+        public get view(): Matrix4x4 {
+            return this._view
+        }
+
+        public get width() {
+            if (this._width != canvas.width) {
+                this._width = canvas.width;
+            }
+            return this._width
+        }
+
+        public get height() {
+            if (this._height != canvas.height) {
+                this._height = canvas.height;
+            }
+            return this._height
+        }
+    }
+}
